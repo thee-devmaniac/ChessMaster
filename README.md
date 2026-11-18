@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Chess Trainer
 
-## Getting Started
+A post-game review and learning tool: recreate a game by clicking, let Stockfish
+evaluate every position, and see where the game turned.
 
-First, run the development server:
+## Run it
+
+Requires Node.js 20.9 or newer.
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Folder | Layer | Status |
+|---|---|---|
+| `src/lib/chess/` | Board and rules (chess.js wrapper) | FEN validation |
+| `src/lib/engine/` | Stockfish worker wrapper, UCI parsing | Milestone 2 |
+| `src/lib/review/` | Move classification | Milestone 5 |
+| `src/components/board/` | Board UI (react-chessboard behind `ChessBoard`) | Static board |
+| `public/engine/` | Stockfish WASM files | Milestone 2 |
+| `src/data/openings/` | Opening trees (King's Gambit) | Later |
 
-## Learn More
+Rule: only `src/components/board/ChessBoard.tsx` imports react-chessboard, and
+only `src/lib/chess/` imports chess.js. Everything else uses our own types.
 
-To learn more about Next.js, take a look at the following resources:
+## Milestones
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [x] 1. Foundation: project runs, board renders from a FEN
+- [ ] 2. Engine spike: Stockfish WASM in a Web Worker
+- [ ] 3. Click interaction and rules
+- [ ] 4. History and navigation
+- [ ] 5. Live analysis and review

@@ -1,69 +1,70 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
 
+import { useState } from "react";
+import { ChessBoard, type Orientation } from "@/components/board/ChessBoard";
+import { STARTING_FEN, checkFen } from "@/lib/chess/fen";
+
+/**
+ * Milestone 1: a static board rendered from a FEN.
+ * No moves yet. Paste a FEN, press Load, and the board shows that position.
+ */
 export default function Home() {
+  const [fen, setFen] = useState(STARTING_FEN);
+  const [draft, setDraft] = useState(STARTING_FEN);
+  const [error, setError] = useState<string | null>(null);
+  const [orientation, setOrientation] = useState<Orientation>("white");
+
+  function loadFen() {
+    const result = checkFen(draft);
+    if (result.ok) {
+      setFen(result.fen);
+      setError(null);
+    } else {
+      setError(result.error);
+    }
+  }
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="layout">
+      <section className="board">
+        <ChessBoard fen={fen} orientation={orientation} />
+      </section>
+
+      <aside className="panel">
+        <h1>Chess Trainer</h1>
+
+        <label htmlFor="fen">Position (FEN)</label>
+        <textarea
+          id="fen"
+          rows={3}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          spellCheck={false}
         />
-        <div className={styles.intro}>
-          <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.tsx</code> file.
-          </h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        {error && <p className="error">{error}</p>}
+
+        <div className="buttons">
+          <button onClick={loadFen}>Load FEN</button>
+          <button
+            onClick={() => {
+              setDraft(STARTING_FEN);
+              setFen(STARTING_FEN);
+              setError(null);
+            }}
           >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            Reset
+          </button>
+          <button
+            onClick={() =>
+              setOrientation((o) => (o === "white" ? "black" : "white"))
+            }
           >
-            Documentation
-          </a>
+            Flip board
+          </button>
         </div>
-      </main>
-    </div>
+
+        <p className="muted">Showing: {fen}</p>
+      </aside>
+    </main>
   );
 }

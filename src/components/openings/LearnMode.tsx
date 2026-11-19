@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ChessBoard, type Orientation } from "@/components/board/ChessBoard";
 import { buildSquareStyles } from "@/components/board/highlights";
+import { ARROW } from "@/components/board/theme";
 import { IDLE } from "@/lib/chess/clickToMove";
 import { checkedKingSquare } from "@/lib/chess/rules";
 import { allLines, moveLabel } from "@/lib/openings/navigate";
@@ -11,7 +12,7 @@ import { useKeyboardNav } from "@/hooks/useKeyboardNav";
 import { OpeningNote } from "./OpeningNote";
 import { LineList } from "./LineList";
 
-const NEXT_ARROW = "rgba(37, 99, 235, 0.75)"; // blue: the move that comes next
+const NEXT_ARROW = ARROW.next; // blue: the move that comes next
 
 /**
  * Learn: a guided walkthrough of one line, one move at a time, with an

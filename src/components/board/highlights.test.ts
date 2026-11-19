@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildSquareStyles } from "./highlights";
 
 describe("buildSquareStyles", () => {
-  it("never uses the 'background' shorthand (React warns when it is mixed with backgroundColor)", () => {
+  it("only ever sets backgroundImage (no 'background' shorthand, no backgroundColor)", () => {
     const styles = buildSquareStyles({
       click: {
         kind: "selected",
@@ -16,11 +16,17 @@ describe("buildSquareStyles", () => {
       checkSquare: "e8",
     });
     for (const style of Object.values(styles)) {
-      expect(style).not.toHaveProperty("background");
+      expect(Object.keys(style)).toEqual(["backgroundImage"]);
     }
-    // The checked king is both selected and in check: both layers are kept.
-    expect(styles.e8.backgroundColor).toBeDefined();
-    expect(styles.e8.backgroundImage).toContain("radial-gradient");
+  });
+
+  it("stacks layers on one square: the check glow sits above the selection tint", () => {
+    const { e8 } = buildSquareStyles({
+      click: { kind: "selected", from: "e8", targets: [] },
+      checkSquare: "e8",
+    });
+    const layers = String(e8.backgroundImage);
+    expect(layers.indexOf("radial-gradient")).toBeLessThan(layers.indexOf("linear-gradient"));
   });
 
   it("shows a dot for a move and a ring for a capture", () => {
@@ -35,5 +41,10 @@ describe("buildSquareStyles", () => {
       },
     });
     expect(styles.e5.backgroundImage).not.toBe(styles.d5.backgroundImage);
+  });
+
+  it("marks both squares of the last move", () => {
+    const styles = buildSquareStyles({ click: { kind: "idle" }, lastMove: { from: "e2", to: "e4" } });
+    expect(Object.keys(styles).sort()).toEqual(["e2", "e4"]);
   });
 });

@@ -3,7 +3,7 @@
 import type { OpeningNode } from "@/lib/openings/types";
 import { moveLabel } from "@/lib/openings/navigate";
 
-/** Colour class for a verdict: green for White, dark for Black, grey for balanced or unclear. */
+/** Colour class for a verdict: ivory for White, slate for Black, gold for balanced or unclear. */
 function verdictClass(verdict: string): string {
   if (verdict.includes("White")) return "verdict-white";
   if (verdict.includes("Black")) return "verdict-black";

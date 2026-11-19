@@ -91,7 +91,7 @@ export default function EngineSpikePage() {
           <button onClick={analyseAll} disabled={running || status === "Loading engine…"}>
             Analyse all
           </button>
-          <Link href="/">Back to board</Link>
+          <Link href="/analyse">Back to the board</Link>
         </div>
 
         <table className="results">

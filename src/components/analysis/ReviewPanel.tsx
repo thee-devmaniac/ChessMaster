@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import type { Color } from "@/lib/engine/types";
 import { formatScore } from "@/lib/engine/score";
 import { SYMBOL, summarise, worstMoves, type Classification, type ReviewedMove } from "@/lib/review/classify";
@@ -126,8 +126,9 @@ export function ReviewPanel(props: Props) {
           <p className="muted">No inaccuracies, mistakes or blunders. Well played!</p>
         ) : (
           <ul className="worst-list">
-            {list.map((r) => (
-              <li key={r.id}>
+            {list.map((r, i) => (
+              // --i lets the CSS stagger the rows (see .worst-list li in globals.css).
+              <li key={r.id} style={{ "--i": i } as CSSProperties}>
                 <button onClick={() => r.id && onJump(r.id)}>
                   <span className={`badge badge-${r.classification}`}>{LABEL[r.classification]}</span>
                   <span className="worst-move">
@@ -159,7 +160,7 @@ export function ReviewPanel(props: Props) {
           Next move in the game: <strong>{fullMove(upcoming)}{SYMBOL[upcoming.classification]}</strong>,{" "}
           {upcoming.classification === "inaccuracy" ? "an" : "a"}{" "}
           {LABEL[upcoming.classification].toLowerCase()} ({formatScore(upcoming.evalBefore)} →{" "}
-          {formatScore(upcoming.evalAfter)}). The red arrow shows it; the green arrow shows the engine&apos;s
+          {formatScore(upcoming.evalAfter)}). The crimson arrow shows it; the gold arrow shows the engine&apos;s
           choice{upcoming.bestMoveSan ? `, ${upcoming.bestMoveSan}` : ""}.
         </p>
       )}

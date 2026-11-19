@@ -12,7 +12,14 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. The engine test page is at http://localhost:3000/engine-spike.
+Open http://localhost:3000.
+
+| Page | What it is |
+|---|---|
+| `/` | Landing page |
+| `/analyse` | Analysis board: recreate or import a game, engine, review |
+| `/openings/kings-gambit` | King's Gambit lessons (Learn, Explore, Predict, Practice) |
+| `/engine-spike` | Engine test page (Milestone 2) |
 
 `npm install` also copies the Stockfish engine files into `public/engine/`
 (see `scripts/copy-engine.mjs`).
@@ -72,3 +79,12 @@ Lines live in `src/data/openings/kingsGambit.ts` as nested moves in standard
 notation, each with an explanation. The first entry in `next` is the main
 line. Positions are computed by chess.js when the page loads, and
 `npm test` fails if any move is illegal, so a typo can't slip through.
+
+## Look and feel
+
+The theme follows the Chess Concept Showcase project: navy background, antique
+gold and arc-blue accents, Cinzel / Space Mono / EB Garamond / Space Grotesk.
+Design tokens (colours, fonts) are CSS variables at the top of
+`src/app/globals.css`; board colours are in `src/components/board/theme.ts`.
+Fonts are loaded with `next/font/google` in `src/app/layout.tsx`, so the first
+build needs an internet connection.

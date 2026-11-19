@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChessBoard, type BoardArrow, type Orientation } from "@/components/board/ChessBoard";
 import { PromotionPicker } from "@/components/board/PromotionPicker";
 import { buildSquareStyles } from "@/components/board/highlights";
+import { ARROW } from "@/components/board/theme";
 import { IDLE, choosePromotion, clickSquare, type ClickState } from "@/lib/chess/clickToMove";
 import { checkedKingSquare, lineToSan, makeMove, turn, type MoveInput, type PlayedMove, type PromotionPiece } from "@/lib/chess/rules";
 import { AnalysisCancelledError } from "@/lib/engine/StockfishEngine";
@@ -16,8 +17,8 @@ import { useStockfish } from "@/hooks/useStockfish";
 import { OpeningNote } from "./OpeningNote";
 import { LineList } from "./LineList";
 
-const NEXT_ARROW = "rgba(37, 99, 235, 0.75)"; // blue: the move that comes next
-const REPLY_ARROW = "rgba(200, 30, 30, 0.75)"; // red: how the opponent punishes a wrong guess
+const NEXT_ARROW = ARROW.next; // blue: the move that comes next
+const REPLY_ARROW = ARROW.played; // crimson: how the opponent punishes a wrong guess
 const NAME = { w: "White", b: "Black" } as const;
 
 type Outcome = "first try" | "with help" | "shown";
@@ -44,6 +45,13 @@ export function PredictMode({ opening }: { opening: Opening }) {
   const [results, setResults] = useState<Record<string, Outcome>>({});
   const [click, setClick] = useState<ClickState>(IDLE);
   const [orientation, setOrientation] = useState<Orientation>("white");
+  // The square to flash gold after a correct guess (cleared after the animation).
+  const [flash, setFlash] = useState<string | null>(null);
+  useEffect(() => {
+    if (!flash) return;
+    const timer = setTimeout(() => setFlash(null), 700);
+    return () => clearTimeout(timer);
+  }, [flash]);
 
   const line = lines[lineIndex];
   const node = opening.nodes[step === 0 ? OPENING_ROOT : line.ids[step - 1]];
@@ -92,7 +100,10 @@ export function PredictMode({ opening }: { opening: Opening }) {
     const played = makeMove(node.fen, move);
     if (!played) return;
     const result = checkGuess(opening, next, played.san);
-    if (result.kind === "correct") advance(phase.hints > 0 || phase.missed ? "with help" : "first try");
+    if (result.kind === "correct") {
+      setFlash(played.to);
+      advance(phase.hints > 0 || phase.missed ? "with help" : "first try");
+    }
     else setPhase({ kind: "wrong", hints: phase.hints, played, result });
   }
 
@@ -119,6 +130,7 @@ export function PredictMode({ opening }: { opening: Opening }) {
     arrows.push({ from: next.uci!.slice(0, 2), to: next.uci!.slice(2, 4), color: NEXT_ARROW });
   }
   const squareStyles = buildSquareStyles({ click, lastMove: shownMove, checkSquare: checkedKingSquare(boardFen) });
+  if (flash) squareStyles[flash] = { ...squareStyles[flash], animation: "goldPulse 0.7s ease-out" };
 
   // ---- Score ----
   const quizIds = line.ids.filter((id) => isQuizMove(opening, opening.nodes[id], side));
@@ -126,7 +138,8 @@ export function PredictMode({ opening }: { opening: Opening }) {
 
   return (
     <div className="layout">
-      <section className="board board-wrap">
+      {/* A wrong guess shakes the board once (the class is only present while the guess is shown). */}
+      <section className={`board board-wrap ${phase.kind === "wrong" ? "shake" : ""}`}>
         <ChessBoard fen={boardFen} orientation={orientation} onSquareClick={handleSquareClick} squareStyles={squareStyles} arrows={arrows} />
         {click.kind === "choosingPromotion" && (
           <PromotionPicker color={turn(node.fen)} onChoose={handlePromotion} onCancel={() => setClick(IDLE)} />
@@ -229,7 +242,7 @@ export function PredictMode({ opening }: { opening: Opening }) {
                 reply.bestMove ? (
                   <p>
                     After {phase.played.san}, the best answer is{" "}
-                    <strong>{lineToSan(phase.played.fenAfter, [reply.bestMove], 1)[0]}</strong> (red arrow). With best play, the
+                    <strong>{lineToSan(phase.played.fenAfter, [reply.bestMove], 1)[0]}</strong> (crimson arrow). With best play, the
                     engine rates the position <strong>{formatScore(reply.score)}</strong> (from White&apos;s point of view).
                   </p>
                 ) : (

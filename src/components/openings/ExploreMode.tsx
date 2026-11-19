@@ -5,6 +5,7 @@ import { ChessBoard, type BoardArrow, type Orientation } from "@/components/boar
 import { MoveList } from "@/components/board/MoveList";
 import { PromotionPicker } from "@/components/board/PromotionPicker";
 import { buildSquareStyles } from "@/components/board/highlights";
+import { ARROW } from "@/components/board/theme";
 import { IDLE, choosePromotion, clickSquare, type ClickState } from "@/lib/chess/clickToMove";
 import { describeStatus } from "@/lib/chess/describe";
 import { currentFen, currentStatus, newSession, sessionReducer, type SessionAction } from "@/lib/chess/game";
@@ -15,8 +16,8 @@ import type { Opening } from "@/lib/openings/types";
 import { useKeyboardNav } from "@/hooks/useKeyboardNav";
 import { OpeningNote } from "./OpeningNote";
 
-const MAIN_ARROW = "rgba(37, 99, 235, 0.8)"; // blue: the main book move
-const ALT_ARROW = "rgba(37, 99, 235, 0.35)"; // pale blue: other book moves
+const MAIN_ARROW = ARROW.next; // blue: the main book move
+const ALT_ARROW = ARROW.alt; // pale blue: other book moves
 
 /**
  * Explore: move freely. While you follow the book, the app explains each

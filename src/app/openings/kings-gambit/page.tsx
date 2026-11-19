@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { kingsGambit } from "@/data/openings/kingsGambit";
 import { buildOpening } from "@/lib/openings/build";
 import { LearnMode } from "@/components/openings/LearnMode";
@@ -28,9 +27,11 @@ export default function KingsGambitPage() {
     <div className="opening-page">
       <header className="opening-header">
         <div>
-          <Link href="/">← Back to the board</Link>
-          <h1>{opening.name}</h1>
-          <p className="muted">{opening.intro}</p>
+          <p className="section-tag">Opening lesson · 1. e4 e5 2. f4</p>
+          <h1 className="page-title">
+            <span className="title-outline">King&apos;s</span> <span className="title-solid">Gambit</span>
+          </h1>
+          <p className="lede">{opening.intro}</p>
         </div>
         <nav className="tabs" aria-label="Lesson mode">
           {MODES.map((m) => (

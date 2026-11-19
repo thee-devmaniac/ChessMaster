@@ -1,56 +1,84 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { moveRows, type GameRecord } from "@/lib/chess/game";
+import type { GameTree } from "@/lib/chess/tree";
+import { moveListModel, type Cell } from "@/lib/chess/moveListModel";
 import { SYMBOL, type Classification } from "@/lib/review/classify";
 
 interface Props {
-  game: GameRecord;
-  /** Ply currently on screen (0 = start). */
-  view: number;
-  onSelect: (ply: number) => void;
-  /** Review verdicts by ply, shown as ?!, ? and ?? after the move. */
-  annotations?: Record<number, Classification>;
+  tree: GameTree;
+  /** Node currently on screen. */
+  current: string;
+  onSelect: (id: string) => void;
+  /** Review verdicts by node id, shown as ?!, ? and ?? after the move. */
+  annotations?: Record<string, Classification>;
 }
 
-/** The move list in "1. e4 e5  2. Nf3 Nc6" form. Click a move to jump to it. */
-export function MoveList({ game, view, onSelect, annotations }: Props) {
+/**
+ * The move list: the main line in two columns, with variations in brackets
+ * underneath the move they replace. Click any move to jump to it.
+ */
+export function MoveList({ tree, current, onSelect, annotations }: Props) {
   const activeRef = useRef<HTMLButtonElement | null>(null);
 
   // Keep the current move visible when stepping through a long game.
   useEffect(() => {
     activeRef.current?.scrollIntoView({ block: "nearest" });
-  }, [view]);
+  }, [current]);
 
-  if (game.moves.length === 0) {
+  const items = moveListModel(tree);
+  if (items.length === 0) {
     return <p className="muted">No moves yet. Click a piece, then click where it should go.</p>;
   }
 
-  const cell = (m?: { san: string; ply: number }) =>
-    m ? (
+  const moveButton = (id: string, text: string, className: string) => {
+    const verdict = annotations?.[id];
+    return (
       <button
-        className={`move ${m.ply === view ? "move-active" : ""}`}
-        ref={m.ply === view ? activeRef : undefined}
-        onClick={() => onSelect(m.ply)}
+        key={id}
+        className={`${className} ${id === current ? "move-active" : ""}`}
+        ref={id === current ? activeRef : undefined}
+        onClick={() => onSelect(id)}
       >
-        {m.san}
-        {annotations?.[m.ply] && annotations[m.ply] !== "good" && (
-          <span className={`annotation annotation-${annotations[m.ply]}`}>{SYMBOL[annotations[m.ply]]}</span>
+        {text}
+        {verdict && verdict !== "good" && (
+          <span className={`annotation annotation-${verdict}`}>{SYMBOL[verdict]}</span>
         )}
       </button>
-    ) : (
-      <span className="move move-empty">{"…"}</span>
     );
+  };
+
+  const cell = (c?: Cell) => (c ? moveButton(c.id, c.san, "move") : <span className="move move-empty">{"…"}</span>);
 
   return (
-    <ol className="move-list">
-      {moveRows(game).map((row) => (
-        <li key={row.number}>
-          <span className="move-number">{row.number}.</span>
-          {cell(row.white)}
-          {cell(row.black)}
-        </li>
-      ))}
-    </ol>
+    <div className="move-list" role="list">
+      {items.map((item, i) =>
+        item.kind === "row" ? (
+          <div className="move-row" role="listitem" key={i}>
+            <span className="move-number">{item.number}.</span>
+            {cell(item.white)}
+            {cell(item.black)}
+          </div>
+        ) : (
+          <div className="variations" key={i}>
+            {item.lines.map((line, j) => (
+              <div className="variation" key={j}>
+                {"("}
+                {line.map((t, k) =>
+                  t.kind === "move" ? (
+                    moveButton(t.id, t.text, "move-inline")
+                  ) : (
+                    <span key={`${t.kind}-${k}`} className="bracket">
+                      {t.kind === "open" ? "(" : ")"}
+                    </span>
+                  ),
+                )}
+                {")"}
+              </div>
+            ))}
+          </div>
+        ),
+      )}
+    </div>
   );
 }

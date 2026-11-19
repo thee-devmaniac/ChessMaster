@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { Analysis, SearchLimit } from "@/lib/engine/types";
 import { AnalysisCache } from "@/lib/engine/cache";
 import { AnalysisCancelledError } from "@/lib/engine/StockfishEngine";
-import { newSession, sessionReducer, type GameRecord } from "@/lib/chess/game";
+import { newSession, recordOf, sessionReducer, type GameRecord } from "@/lib/chess/game";
+import { ROOT, lineThrough } from "@/lib/chess/tree";
 import { analyseGame, type Analyser } from "./analyseGame";
 
 /** A fake engine that answers instantly and records what it was asked. */
@@ -20,10 +21,11 @@ class FakeAnalyser implements Analyser {
 }
 
 function game(ucis: string[]): GameRecord {
-  return ucis.reduce(
-    (s, u) => sessionReducer(s, { type: "play", move: { from: u.slice(0, 2), to: u.slice(2, 4) } }),
+  const s = ucis.reduce(
+    (acc, u) => sessionReducer(acc, { type: "play", move: { from: u.slice(0, 2), to: u.slice(2, 4) } }),
     newSession(),
-  ).game;
+  );
+  return recordOf(s.tree, lineThrough(s.tree, ROOT));
 }
 
 const G = game(["e2e4", "e7e5", "g1f3"]); // 3 moves -> 4 positions

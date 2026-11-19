@@ -9,7 +9,8 @@ import { buildSquareStyles } from "@/components/board/highlights";
 import { STARTING_FEN, checkFen } from "@/lib/chess/fen";
 import { checkedKingSquare, importPgn, turn, type GameStatus, type MoveInput, type PromotionPiece } from "@/lib/chess/rules";
 import { IDLE, choosePromotion, clickSquare, type ClickState } from "@/lib/chess/clickToMove";
-import { currentFen, isAtEnd, newSession, sessionReducer, statusAt, type SessionAction } from "@/lib/chess/game";
+import { currentFen, currentStatus, newSession, recordOf, sessionReducer, type SessionAction } from "@/lib/chess/game";
+import { ROOT, has, isMainLine, lineThrough } from "@/lib/chess/tree";
 import { EvalBar } from "@/components/analysis/EvalBar";
 import { EnginePanel } from "@/components/analysis/EnginePanel";
 import { ReviewPanel, type ReviewState } from "@/components/analysis/ReviewPanel";
@@ -21,7 +22,7 @@ import { StockfishEngine } from "@/lib/engine/StockfishEngine";
 import { createStockfishWorker } from "@/lib/engine/createStockfishWorker";
 import type { Score } from "@/lib/engine/types";
 import { analyseGame, DEFAULT_REVIEW_DEPTH } from "@/lib/review/analyseGame";
-import { reviewMoves, type Classification } from "@/lib/review/classify";
+import { reviewMoves, type Classification, type ReviewedMove } from "@/lib/review/classify";
 
 const BEST_ARROW = "rgba(21, 128, 61, 0.8)"; // green: the engine's move
 const PLAYED_ARROW = "rgba(200, 30, 30, 0.75)"; // red: the move played in the game
@@ -42,13 +43,13 @@ function describeStatus(s: GameStatus): string {
 }
 
 /**
- * Version 1: recreate a game, step through it, see the engine's view of every
- * position, and review the whole game for mistakes.
+ * Recreate a game, explore other moves as variations, see the engine's view of
+ * every position, and review the game for mistakes.
  *
  * State:
- *  - `session` (game record + view index), changed only through sessionReducer
+ *  - `session` (move tree + current node), changed only through sessionReducer
  *  - `click`, the UI-only click-to-move state
- *  - `review`, the result of the last full-game review
+ *  - `verdicts`, review results by node id (kept across reviews of different lines)
  * Engine results live in `cache`, shared by live analysis and the review.
  */
 export default function Home() {
@@ -58,11 +59,13 @@ export default function Home() {
   const [importText, setImportText] = useState("");
   const [importMessage, setImportMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const { game, view } = session;
+  const { tree, current } = session;
+  const node = tree.nodes[current];
   const fen = currentFen(session);
-  const status = statusAt(game, view);
+  const status = currentStatus(session);
   const gameOver = status.kind !== "playing";
-  const laterMoves = game.moves.length - view;
+  const onMainLine = isMainLine(tree, current);
+  const hasMovesAfter = node.children.length > 0;
 
   // ---- Engine: one for the position on screen, one per review ----
   const [cache] = useState(() => new AnalysisCache());
@@ -71,16 +74,20 @@ export default function Home() {
   const live = useLiveAnalysis(engine, cache, fen, engineOn && !gameOver);
 
   const [review, setReview] = useState<ReviewState>({ status: "idle" });
+  const [verdicts, setVerdicts] = useState<Record<string, ReviewedMove>>({});
   const [reviewDepth, setReviewDepth] = useState(DEFAULT_REVIEW_DEPTH);
   const reviewAbort = useRef<AbortController | null>(null);
   // Stop a running review if the page closes.
   useEffect(() => () => reviewAbort.current?.abort(), []);
 
+  /** Reviews the line through the position on screen: the main line, or the variation you are in. */
   async function startReview() {
     reviewAbort.current?.abort();
     const controller = new AbortController();
     reviewAbort.current = controller;
-    const reviewed = game; // the game as it is now; later edits make the review "stale"
+    const lineIds = lineThrough(tree, current);
+    const mainLine = onMainLine;
+    const reviewed = recordOf(tree, lineIds);
     const total = reviewed.moves.length + 1;
     setReview({ status: "running", done: 0, total });
 
@@ -94,8 +101,14 @@ export default function Home() {
         signal: controller.signal,
         onProgress: (done) => setReview({ status: "running", done, total }),
       });
-      if (analyses) setReview({ status: "done", moves: reviewMoves(reviewed, analyses), game: reviewed });
-      else setReview({ status: "idle" }); // cancelled
+      if (!analyses || controller.signal.aborted) {
+        setReview({ status: "idle" }); // cancelled, or a new game was loaded meanwhile
+        return;
+      }
+      // Attach each verdict to its node in the tree, adding to earlier reviews.
+      const results = reviewMoves(reviewed, analyses).map((r, i) => ({ ...r, id: lineIds[i] }));
+      setVerdicts((v) => ({ ...v, ...Object.fromEntries(results.map((r) => [r.id, r])) }));
+      setReview({ status: "done", lineIds, mainLine });
     } catch (e) {
       setReview({ status: "error", message: e instanceof Error ? e.message : String(e) });
     } finally {
@@ -103,17 +116,19 @@ export default function Home() {
     }
   }
 
-  const reviewDone = review.status === "done" ? review : null;
-  const reviewCurrent = reviewDone !== null && reviewDone.game === game;
-  const annotations: Record<number, Classification> = {};
-  if (reviewCurrent) for (const r of reviewDone.moves) annotations[r.ply] = r.classification;
-  // The reviewed move that will be played next from the position on screen.
-  const upcoming = reviewCurrent && view < game.moves.length ? reviewDone.moves[view] : null;
+  // Verdicts of the last reviewed line, leaving out moves that have since been deleted.
+  const reviewedMoves =
+    review.status === "done" ? review.lineIds.filter((id) => has(tree, id) && verdicts[id]).map((id) => verdicts[id]) : [];
+  const annotations: Record<string, Classification> = {};
+  for (const [id, r] of Object.entries(verdicts)) if (has(tree, id)) annotations[id] = r.classification;
+  // The reviewed move that comes next on this line, from the position on screen.
+  const nextId = node.children[0];
+  const upcoming = nextId ? (verdicts[nextId] ?? null) : null;
 
   // ---- Arrows and evaluation bar ----
   const arrows: BoardArrow[] = [];
   if (upcoming && upcoming.classification !== "good") {
-    const next = game.moves[view];
+    const next = tree.nodes[nextId].move!;
     arrows.push({ from: next.from, to: next.to, color: PLAYED_ARROW });
   }
   if (live?.bestMove && engineOn) {
@@ -127,6 +142,12 @@ export default function Home() {
   /** Every change to the session also clears any half-finished click. */
   function act(action: SessionAction) {
     setClick(IDLE);
+    if (action.type === "new" || action.type === "load") {
+      // A different game: node ids start again from n1, so old verdicts no longer apply.
+      reviewAbort.current?.abort();
+      setVerdicts({});
+      setReview({ status: "idle" });
+    }
     dispatch(action);
   }
 
@@ -138,8 +159,8 @@ export default function Home() {
       const map: Record<string, SessionAction> = {
         ArrowLeft: { type: "back" },
         ArrowRight: { type: "forward" },
-        Home: { type: "goTo", ply: 0 },
-        End: { type: "goTo", ply: Number.MAX_SAFE_INTEGER },
+        Home: { type: "start" },
+        End: { type: "end" },
       };
       const action = map[e.key];
       if (action) {
@@ -172,7 +193,7 @@ export default function Home() {
   function loadFen() {
     const result = checkFen(importText);
     if (result.ok) {
-      act({ type: "start", startFen: result.fen });
+      act({ type: "new", startFen: result.fen });
       setImportMessage({ ok: true, text: "Position loaded." });
     } else {
       setImportMessage({ ok: false, text: `Invalid FEN: ${result.error}` });
@@ -200,7 +221,7 @@ export default function Home() {
 
   const squareStyles = buildSquareStyles({
     click,
-    lastMove: view > 0 ? game.moves[view - 1] : null,
+    lastMove: node.move,
     checkSquare: checkedKingSquare(fen),
   });
 
@@ -228,31 +249,35 @@ export default function Home() {
         <p className={`status ${gameOver ? "status-over" : ""}`}>{describeStatus(status)}</p>
 
         <div className="nav" aria-label="Move navigation">
-          <button onClick={() => act({ type: "goTo", ply: 0 })} disabled={view === 0} title="Start (Home)">⏮</button>
-          <button onClick={() => act({ type: "back" })} disabled={view === 0} title="Back (←)">◀</button>
-          <button onClick={() => act({ type: "forward" })} disabled={isAtEnd(session)} title="Forward (→)">▶</button>
-          <button onClick={() => act({ type: "goTo", ply: game.moves.length })} disabled={isAtEnd(session)} title="End (End)">⏭</button>
+          <button onClick={() => act({ type: "start" })} disabled={current === ROOT} title="Start (Home)">⏮</button>
+          <button onClick={() => act({ type: "back" })} disabled={current === ROOT} title="Back (←)">◀</button>
+          <button onClick={() => act({ type: "forward" })} disabled={!hasMovesAfter} title="Forward (→)">▶</button>
+          <button onClick={() => act({ type: "end" })} disabled={!hasMovesAfter} title="End of this line (End)">⏭</button>
         </div>
 
-        <MoveList
-          game={game}
-          view={view}
-          onSelect={(ply) => act({ type: "goTo", ply })}
-          annotations={reviewCurrent ? annotations : undefined}
-        />
+        <MoveList tree={tree} current={current} onSelect={(id) => act({ type: "goTo", id })} annotations={annotations} />
 
-        {laterMoves > 0 && (
+        {hasMovesAfter && (
           <p className="hint">
-            Viewing an earlier position. Playing a different move here replaces the {laterMoves} later
-            half-move{laterMoves === 1 ? "" : "s"}.
+            Viewing an earlier position. Playing a different move here starts a variation; the moves that
+            followed are kept.
           </p>
         )}
 
         <div className="buttons">
-          <button onClick={() => act({ type: "undo" })} disabled={game.moves.length === 0}>
-            Undo last move
+          <button
+            onClick={() => act({ type: "delete" })}
+            disabled={current === ROOT}
+            title="Deletes the move on screen and every move after it in this line"
+          >
+            Delete move
           </button>
-          <button onClick={() => act({ type: "start", startFen: STARTING_FEN })}>New game</button>
+          {!onMainLine && (
+            <button onClick={() => act({ type: "promote" })} title="Makes this variation the main line">
+              Make main line
+            </button>
+          )}
+          <button onClick={() => act({ type: "new", startFen: STARTING_FEN })}>New game</button>
           <button onClick={() => setOrientation((o) => (o === "white" ? "black" : "white"))}>Flip board</button>
         </div>
 
@@ -267,13 +292,14 @@ export default function Home() {
 
         <ReviewPanel
           review={review}
-          stale={reviewDone !== null && !reviewCurrent}
-          canReview={game.moves.length > 0}
+          moves={reviewedMoves}
+          target={onMainLine ? "main line" : "this variation"}
+          canReview={lineThrough(tree, current).length > 0}
           depth={reviewDepth}
           onDepthChange={setReviewDepth}
           onStart={startReview}
           onCancel={() => reviewAbort.current?.abort()}
-          onJump={(ply) => act({ type: "goTo", ply: ply - 1 })}
+          onJump={(id) => act({ type: "goTo", id: tree.nodes[id].parent ?? ROOT })}
           upcoming={upcoming}
         />
 

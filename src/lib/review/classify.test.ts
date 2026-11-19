@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Analysis, Score } from "@/lib/engine/types";
-import { newSession, sessionReducer, fenAt, type Session } from "@/lib/chess/game";
+import { newSession, recordOf, sessionReducer, fenAt, type GameRecord } from "@/lib/chess/game";
+import { ROOT, lineThrough } from "@/lib/chess/tree";
 import {
   BLUNDER_CP,
   EVAL_CAP_CP,
@@ -72,28 +73,29 @@ describe("classify", () => {
   });
 });
 
-/** Builds a session from UCI moves. */
-function play(ucis: string[]): Session {
-  return ucis.reduce(
-    (s, u) => sessionReducer(s, { type: "play", move: { from: u.slice(0, 2), to: u.slice(2, 4) } }),
+/** Builds a line of moves from UCI strings. */
+function play(ucis: string[]): GameRecord {
+  const s = ucis.reduce(
+    (acc, u) => sessionReducer(acc, { type: "play", move: { from: u.slice(0, 2), to: u.slice(2, 4) } }),
     newSession(),
   );
+  return recordOf(s.tree, lineThrough(s.tree, ROOT));
 }
 
 describe("reviewMoves on Scholar's mate", () => {
   // 1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6?? 4. Qxf7#
-  const s = play(["e2e4", "e7e5", "d1h5", "b8c6", "f1c4", "g8f6", "h5f7"]);
+  const game = play(["e2e4", "e7e5", "d1h5", "b8c6", "f1c4", "g8f6", "h5f7"]);
   // Hand-made engine results, one per position (White's point of view).
   const scores: Score[] = [cp(30), cp(30), cp(30), cp(-20), cp(10), cp(-20), mate("w", 1), mate("w", 0)];
   const best = ["e2e4", "g1f3", "b1c3", "g7g6", "g8f6", "d8e7", "h5f7", null];
   const analyses: Analysis[] = scores.map((score, i) => ({
-    fen: fenAt(s.game, i),
+    fen: fenAt(game, i),
     depth: 14,
     score,
     bestMove: best[i],
     pv: [],
   }));
-  const reviewed = reviewMoves(s.game, analyses);
+  const reviewed = reviewMoves(game, analyses);
 
   it("marks Nf6 as Black's blunder, with Qe7 as the better move", () => {
     const nf6 = reviewed[5];

@@ -177,7 +177,6 @@ button:disabled {
 }
 
 .move-list {
-  list-style: none;
   margin: 0;
   padding: 4px;
   max-height: 260px;
@@ -187,12 +186,6 @@ button:disabled {
   border-radius: 4px;
   font-family: monospace;
   font-size: 0.95rem;
-}
-
-.move-list li {
-  display: grid;
-  grid-template-columns: 3em 1fr 1fr;
-  align-items: center;
 }
 
 .move-number {
@@ -457,4 +450,48 @@ progress {
 
 .move-active .annotation {
   color: white;
+}
+
+/* ---- Milestone 6: variations in the move list ---- */
+
+.move-row {
+  display: grid;
+  grid-template-columns: 3em 1fr 1fr;
+  align-items: center;
+}
+
+.variations {
+  margin: 2px 0 4px 3em;
+  padding-left: 8px;
+  border-left: 2px solid #ddd;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.variation {
+  line-height: 1.6;
+}
+
+.move-inline {
+  border: none;
+  background: none;
+  padding: 0 3px;
+  border-radius: 3px;
+  font: inherit;
+  color: inherit;
+}
+
+.move-inline:hover {
+  background: #eee;
+}
+
+/* Must come after .move-inline, or its "background: none" would hide the highlight. */
+.move-inline.move-active {
+  background: #3b6ea8;
+  color: white;
+}
+
+.bracket {
+  color: #999;
+  margin: 0 1px;
 }

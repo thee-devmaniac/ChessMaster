@@ -57,8 +57,12 @@ export function classify(loss: number): Classification {
 }
 
 export interface ReviewedMove {
-  /** Ply of the position AFTER this move (matches the move list). */
+  /** Ply of the position AFTER this move, counted along the reviewed line. */
   ply: number;
+  /** The move-tree node this verdict belongs to (set by the page). */
+  id?: string;
+  /** Full-move number as written in the game ("12" in "12... Nf6"). */
+  moveNumber: number;
   san: string;
   mover: Color;
   evalBefore: Score;
@@ -87,6 +91,7 @@ export function reviewMoves(game: GameRecord, analyses: Analysis[]): ReviewedMov
     const loss = isBest ? 0 : centipawnLoss(before.score, after.score, mover);
     return {
       ply: i + 1,
+      moveNumber: Number(fenBefore.split(" ")[5]) || 1,
       san: move.san,
       mover,
       evalBefore: before.score,

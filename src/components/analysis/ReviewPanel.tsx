@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import type { Color } from "@/lib/engine/types";
-import type { GameRecord } from "@/lib/chess/game";
 import { formatScore } from "@/lib/engine/score";
 import { SYMBOL, summarise, worstMoves, type Classification, type ReviewedMove } from "@/lib/review/classify";
 
 export type ReviewState =
   | { status: "idle" }
   | { status: "running"; done: number; total: number }
-  | { status: "done"; moves: ReviewedMove[]; game: GameRecord }
+  | { status: "done"; lineIds: string[]; mainLine: boolean }
   | { status: "error"; message: string };
 
 const LABEL: Record<Classification, string> = {
@@ -21,29 +20,31 @@ const LABEL: Record<Classification, string> = {
 
 interface Props {
   review: ReviewState;
-  /** True if the game changed after the review was made. */
-  stale: boolean;
+  /** Verdicts for the last reviewed line (moves deleted since are left out). */
+  moves: ReviewedMove[];
+  /** What the button will review: the main line, or the variation on screen. */
+  target: "main line" | "this variation";
   canReview: boolean;
   depth: number;
   onDepthChange: (d: number) => void;
   onStart: () => void;
   onCancel: () => void;
-  /** Called with a reviewed move's ply; the page shows the position just before it. */
-  onJump: (ply: number) => void;
+  /** Called with a reviewed move's node id; the page shows the position just before it. */
+  onJump: (id: string) => void;
   /** The reviewed move that is about to be played from the position on screen. */
   upcoming: ReviewedMove | null;
 }
 
-const fullMove = (r: ReviewedMove) => `${Math.ceil(r.ply / 2)}${r.mover === "w" ? "." : "..."} ${r.san}`;
+const fullMove = (r: ReviewedMove) => `${r.moveNumber}${r.mover === "w" ? "." : "..."} ${r.san}`;
 
 export function ReviewPanel(props: Props) {
-  const { review, stale, canReview, depth, onDepthChange, onStart, onCancel, onJump, upcoming } = props;
+  const { review, moves, target, canReview, depth, onDepthChange, onStart, onCancel, onJump, upcoming } = props;
   const [side, setSide] = useState<Color | "both">("both");
 
   const controls = (
     <div className="buttons">
       <button onClick={onStart} disabled={!canReview || review.status === "running"}>
-        {review.status === "done" ? "Review again" : "Review game"}
+        {target === "main line" ? "Review game" : "Review this variation"}
       </button>
       <label className="muted">
         Depth{" "}
@@ -80,10 +81,12 @@ export function ReviewPanel(props: Props) {
   } else if (review.status === "error") {
     body = <p className="error">Review failed: {review.message}</p>;
   } else {
-    const list = worstMoves(review.moves, side === "both" ? undefined : side);
+    const list = worstMoves(moves, side === "both" ? undefined : side);
     body = (
       <>
-        {stale && <p className="hint">The game has changed since this review. Review again to update it.</p>}
+        <p className="muted">
+          Reviewed {review.mainLine ? "the main line" : "a variation"} ({review.lineIds.length} half-moves).
+        </p>
 
         <table className="summary">
           <thead>
@@ -97,7 +100,7 @@ export function ReviewPanel(props: Props) {
           </thead>
           <tbody>
             {(["w", "b"] as const).map((c) => {
-              const s = summarise(review.moves, c);
+              const s = summarise(moves, c);
               return (
                 <tr key={c}>
                   <td>{c === "w" ? "White" : "Black"}</td>
@@ -124,8 +127,8 @@ export function ReviewPanel(props: Props) {
         ) : (
           <ul className="worst-list">
             {list.map((r) => (
-              <li key={r.ply}>
-                <button onClick={() => onJump(r.ply)} disabled={stale}>
+              <li key={r.id}>
+                <button onClick={() => r.id && onJump(r.id)}>
                   <span className={`badge badge-${r.classification}`}>{LABEL[r.classification]}</span>
                   <span className="worst-move">
                     {fullMove(r)}
@@ -151,7 +154,7 @@ export function ReviewPanel(props: Props) {
       </div>
       {controls}
       {body}
-      {upcoming && !stale && upcoming.classification !== "good" && (
+      {upcoming && upcoming.classification !== "good" && (
         <p className={`verdict verdict-${upcoming.classification}`}>
           Next move in the game: <strong>{fullMove(upcoming)}{SYMBOL[upcoming.classification]}</strong>,{" "}
           {upcoming.classification === "inaccuracy" ? "an" : "a"}{" "}

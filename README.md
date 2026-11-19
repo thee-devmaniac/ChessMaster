@@ -28,7 +28,7 @@ npm run test:watch  # re-run on every save
 
 | Folder | Layer | Status |
 |---|---|---|
-| `src/lib/chess/` | Board and rules (chess.js wrapper), click-to-move | Done (M3) |
+| `src/lib/chess/` | Rules (chess.js wrapper), click-to-move, move tree with variations | Done (M3, M6) |
 | `src/lib/engine/` | Stockfish worker wrapper, UCI parsing | Done (M2) |
 | `src/lib/review/` | Move classification, full-game review | Done (M5) |
 | `src/components/board/` | Board UI, highlights, promotion picker | Done (M3) |
@@ -47,6 +47,7 @@ only `src/lib/chess/` imports chess.js. Everything else uses our own types.
 - [x] 3. Click interaction and rules
 - [x] 4. History and navigation (plus PGN import)
 - [x] 5. Live analysis and review
+- [x] 6. Variations: the game is a move tree; other moves become side lines
 Rule: only `src/lib/engine/` talks to Stockfish.
 
 ## How the review works

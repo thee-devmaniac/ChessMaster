@@ -642,3 +642,20 @@ progress {
 .off-book {
   border-left: 4px solid #e07b00;
 }
+
+/* ---- Milestone 8: Predict and Practice ---- */
+
+.quiz {
+  border-left: 4px solid #2563eb;
+}
+
+.hint-line {
+  font-size: 0.9rem;
+  background: #eef4ff;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.verdict-good {
+  border-left: 4px solid #15803d;
+}

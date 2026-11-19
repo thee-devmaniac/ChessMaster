@@ -9,6 +9,7 @@ import { allLines, moveLabel } from "@/lib/openings/navigate";
 import { OPENING_ROOT, type Opening } from "@/lib/openings/types";
 import { useKeyboardNav } from "@/hooks/useKeyboardNav";
 import { OpeningNote } from "./OpeningNote";
+import { LineList } from "./LineList";
 
 const NEXT_ARROW = "rgba(37, 99, 235, 0.75)"; // blue: the move that comes next
 
@@ -79,19 +80,7 @@ export function LearnMode({ opening }: { opening: Opening }) {
           </p>
         )}
 
-        <section className="card">
-          <h2>Lines</h2>
-          <ul className="line-list">
-            {lines.map((l, i) => (
-              <li key={l.ids.join(" ")}>
-                <button className={i === lineIndex ? "line-active" : ""} onClick={() => chooseLine(i)}>
-                  <span>{l.name}</span>
-                  <span className="muted">{l.ids.length} moves</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <LineList lines={lines} selected={lineIndex} onSelect={chooseLine} />
       </aside>
     </div>
   );

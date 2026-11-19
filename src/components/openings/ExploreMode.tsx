@@ -8,21 +8,15 @@ import { buildSquareStyles } from "@/components/board/highlights";
 import { IDLE, choosePromotion, clickSquare, type ClickState } from "@/lib/chess/clickToMove";
 import { describeStatus } from "@/lib/chess/describe";
 import { currentFen, currentStatus, newSession, sessionReducer, type SessionAction } from "@/lib/chess/game";
-import { checkedKingSquare, turn, type MoveInput, type PromotionPiece } from "@/lib/chess/rules";
+import { checkedKingSquare, turn, type PromotionPiece } from "@/lib/chess/rules";
 import { ROOT, moveNumberOf, pathTo } from "@/lib/chess/tree";
-import { firstSentence, locate, moveLabel } from "@/lib/openings/navigate";
-import type { Opening, OpeningNode } from "@/lib/openings/types";
+import { firstSentence, locate, moveLabel, toMoveInput } from "@/lib/openings/navigate";
+import type { Opening } from "@/lib/openings/types";
 import { useKeyboardNav } from "@/hooks/useKeyboardNav";
 import { OpeningNote } from "./OpeningNote";
 
 const MAIN_ARROW = "rgba(37, 99, 235, 0.8)"; // blue: the main book move
 const ALT_ARROW = "rgba(37, 99, 235, 0.35)"; // pale blue: other book moves
-
-/** Converts a book node's engine notation into a move the reducer can play. */
-function inputOf(node: OpeningNode): MoveInput {
-  const uci = node.uci!;
-  return { from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: (uci[4] as PromotionPiece) || undefined };
-}
 
 /**
  * Explore: move freely. While you follow the book, the app explains each
@@ -156,7 +150,7 @@ export function ExploreMode({ opening }: { opening: Opening }) {
               <ul className="reply-list">
                 {replies.map((r, i) => (
                   <li key={r.id}>
-                    <button onClick={() => act({ type: "play", move: inputOf(r) })}>
+                    <button onClick={() => act({ type: "play", move: toMoveInput(r) })}>
                       <span className="reply-move">
                         {moveLabel(r)}
                         {i === 0 && <span className="chip">main</span>}

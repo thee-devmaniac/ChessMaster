@@ -1,3 +1,4 @@
+import type { MoveInput, PromotionPiece } from "@/lib/chess/rules";
 import { OPENING_ROOT, type Opening, type OpeningNode } from "./types";
 
 /** A complete line, from the first move to a leaf, used by Learn mode. */
@@ -49,4 +50,10 @@ export function firstSentence(text: string): string {
 export function moveLabel(node: OpeningNode): string {
   if (!node.san) return "Start";
   return `${node.moveNumber}${node.turn === "b" ? "." : "..."} ${node.san}`;
+}
+
+/** A book move as a move the session reducer can play. */
+export function toMoveInput(node: OpeningNode): MoveInput {
+  const uci = node.uci!;
+  return { from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: (uci[4] as PromotionPiece | undefined) || undefined };
 }

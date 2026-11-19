@@ -1,0 +1,165 @@
+"use client";
+
+import { useState } from "react";
+import type { Color } from "@/lib/engine/types";
+import type { GameRecord } from "@/lib/chess/game";
+import { formatScore } from "@/lib/engine/score";
+import { SYMBOL, summarise, worstMoves, type Classification, type ReviewedMove } from "@/lib/review/classify";
+
+export type ReviewState =
+  | { status: "idle" }
+  | { status: "running"; done: number; total: number }
+  | { status: "done"; moves: ReviewedMove[]; game: GameRecord }
+  | { status: "error"; message: string };
+
+const LABEL: Record<Classification, string> = {
+  good: "Good",
+  inaccuracy: "Inaccuracy",
+  mistake: "Mistake",
+  blunder: "Blunder",
+};
+
+interface Props {
+  review: ReviewState;
+  /** True if the game changed after the review was made. */
+  stale: boolean;
+  canReview: boolean;
+  depth: number;
+  onDepthChange: (d: number) => void;
+  onStart: () => void;
+  onCancel: () => void;
+  /** Called with a reviewed move's ply; the page shows the position just before it. */
+  onJump: (ply: number) => void;
+  /** The reviewed move that is about to be played from the position on screen. */
+  upcoming: ReviewedMove | null;
+}
+
+const fullMove = (r: ReviewedMove) => `${Math.ceil(r.ply / 2)}${r.mover === "w" ? "." : "..."} ${r.san}`;
+
+export function ReviewPanel(props: Props) {
+  const { review, stale, canReview, depth, onDepthChange, onStart, onCancel, onJump, upcoming } = props;
+  const [side, setSide] = useState<Color | "both">("both");
+
+  const controls = (
+    <div className="buttons">
+      <button onClick={onStart} disabled={!canReview || review.status === "running"}>
+        {review.status === "done" ? "Review again" : "Review game"}
+      </button>
+      <label className="muted">
+        Depth{" "}
+        <select value={depth} onChange={(e) => onDepthChange(Number(e.target.value))} disabled={review.status === "running"}>
+          {[10, 12, 14, 16, 18].map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+
+  let body: React.ReactNode = null;
+  if (review.status === "idle") {
+    body = (
+      <p className="muted">
+        Analyses every position, then marks each move as good, inaccuracy (?!), mistake (?) or blunder (??).
+      </p>
+    );
+  } else if (review.status === "running") {
+    body = (
+      <>
+        <progress value={review.done} max={review.total} />
+        <p className="muted">
+          Analysing position {review.done} of {review.total}…{" "}
+          <button className="link-button" onClick={onCancel}>
+            Cancel
+          </button>
+        </p>
+      </>
+    );
+  } else if (review.status === "error") {
+    body = <p className="error">Review failed: {review.message}</p>;
+  } else {
+    const list = worstMoves(review.moves, side === "both" ? undefined : side);
+    body = (
+      <>
+        {stale && <p className="hint">The game has changed since this review. Review again to update it.</p>}
+
+        <table className="summary">
+          <thead>
+            <tr>
+              <th></th>
+              <th>?!</th>
+              <th>?</th>
+              <th>??</th>
+              <th title="Average centipawn loss per move: lower is better">Avg loss</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(["w", "b"] as const).map((c) => {
+              const s = summarise(review.moves, c);
+              return (
+                <tr key={c}>
+                  <td>{c === "w" ? "White" : "Black"}</td>
+                  <td>{s.inaccuracies}</td>
+                  <td>{s.mistakes}</td>
+                  <td>{s.blunders}</td>
+                  <td>{s.averageLoss}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        <div className="worst-header">
+          <h3>Worst moves</h3>
+          <select value={side} onChange={(e) => setSide(e.target.value as Color | "both")}>
+            <option value="both">Both sides</option>
+            <option value="w">White only</option>
+            <option value="b">Black only</option>
+          </select>
+        </div>
+        {list.length === 0 ? (
+          <p className="muted">No inaccuracies, mistakes or blunders. Well played!</p>
+        ) : (
+          <ul className="worst-list">
+            {list.map((r) => (
+              <li key={r.ply}>
+                <button onClick={() => onJump(r.ply)} disabled={stale}>
+                  <span className={`badge badge-${r.classification}`}>{LABEL[r.classification]}</span>
+                  <span className="worst-move">
+                    {fullMove(r)}
+                    {SYMBOL[r.classification]}
+                  </span>
+                  <span className="muted">
+                    {formatScore(r.evalBefore)} → {formatScore(r.evalAfter)}
+                    {r.bestMoveSan ? ` · better: ${r.bestMoveSan}` : ""}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <section className="card">
+      <div className="card-header">
+        <h2>Game review</h2>
+      </div>
+      {controls}
+      {body}
+      {upcoming && !stale && upcoming.classification !== "good" && (
+        <p className={`verdict verdict-${upcoming.classification}`}>
+          Next move in the game: <strong>{fullMove(upcoming)}{SYMBOL[upcoming.classification]}</strong>,{" "}
+          {upcoming.classification === "inaccuracy" ? "an" : "a"}{" "}
+          {LABEL[upcoming.classification].toLowerCase()} ({formatScore(upcoming.evalBefore)} →{" "}
+          {formatScore(upcoming.evalAfter)}). The red arrow shows it; the green arrow shows the engine&apos;s
+          choice{upcoming.bestMoveSan ? `, ${upcoming.bestMoveSan}` : ""}.
+        </p>
+      )}
+    </section>
+  );
+}

@@ -7,7 +7,9 @@ import { MoveList } from "@/components/board/MoveList";
 import { PromotionPicker } from "@/components/board/PromotionPicker";
 import { buildSquareStyles } from "@/components/board/highlights";
 import { STARTING_FEN, checkFen } from "@/lib/chess/fen";
-import { checkedKingSquare, importPgn, turn, type GameStatus, type MoveInput, type PromotionPiece } from "@/lib/chess/rules";
+import { checkedKingSquare, importPgn, turn, type MoveInput, type PromotionPiece } from "@/lib/chess/rules";
+import { describeStatus } from "@/lib/chess/describe";
+import { useKeyboardNav } from "@/hooks/useKeyboardNav";
 import { IDLE, choosePromotion, clickSquare, type ClickState } from "@/lib/chess/clickToMove";
 import { currentFen, currentStatus, newSession, recordOf, sessionReducer, type SessionAction } from "@/lib/chess/game";
 import { ROOT, has, isMainLine, lineThrough } from "@/lib/chess/tree";
@@ -26,21 +28,6 @@ import { reviewMoves, type Classification, type ReviewedMove } from "@/lib/revie
 
 const BEST_ARROW = "rgba(21, 128, 61, 0.8)"; // green: the engine's move
 const PLAYED_ARROW = "rgba(200, 30, 30, 0.75)"; // red: the move played in the game
-
-const NAME = { w: "White", b: "Black" } as const;
-
-function describeStatus(s: GameStatus): string {
-  switch (s.kind) {
-    case "playing":
-      return `${NAME[s.turn]} to move${s.inCheck ? " (in check!)" : ""}`;
-    case "checkmate":
-      return `Checkmate: ${NAME[s.winner]} wins`;
-    case "stalemate":
-      return "Stalemate: draw (the side to move has no legal move but is not in check)";
-    case "draw":
-      return `Draw by ${s.reason}`;
-  }
-}
 
 /**
  * Recreate a game, explore other moves as variations, see the engine's view of
@@ -152,26 +139,12 @@ export default function Home() {
   }
 
   // Left/right arrow keys step through the game; Home/End jump to start/end.
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      const target = e.target as HTMLElement;
-      if (target.tagName === "TEXTAREA" || target.tagName === "INPUT") return; // typing, not navigating
-      const map: Record<string, SessionAction> = {
-        ArrowLeft: { type: "back" },
-        ArrowRight: { type: "forward" },
-        Home: { type: "start" },
-        End: { type: "end" },
-      };
-      const action = map[e.key];
-      if (action) {
-        e.preventDefault();
-        setClick(IDLE);
-        dispatch(action);
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  useKeyboardNav({
+    back: () => act({ type: "back" }),
+    forward: () => act({ type: "forward" }),
+    start: () => act({ type: "start" }),
+    end: () => act({ type: "end" }),
+  });
 
   function playMove(move?: MoveInput) {
     if (move) dispatch({ type: "play", move });
@@ -319,7 +292,8 @@ export default function Home() {
           {importMessage && <p className={importMessage.ok ? "muted" : "error"}>{importMessage.text}</p>}
         </details>
 
-        <p className="muted">Current: {fen}</p>
+        <p className="muted fen">Current: {fen}</p>
+        <Link href="/openings/kings-gambit">Opening lessons: King&apos;s Gambit →</Link>
         <Link href="/engine-spike">Engine spike (Milestone 2) →</Link>
       </aside>
     </main>

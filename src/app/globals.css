@@ -70,6 +70,10 @@ button:hover {
 .muted {
   color: #666;
   font-size: 0.8rem;
+}
+
+/* A FEN is one long "word"; let it wrap anywhere. Ordinary text must not. */
+.fen {
   word-break: break-all;
 }
 
@@ -494,4 +498,147 @@ progress {
 .bracket {
   color: #999;
   margin: 0 1px;
+}
+
+/* ---- Milestone 7: opening lessons ---- */
+
+.opening-page {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.opening-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 24px 24px 0;
+}
+
+.opening-header h1 {
+  margin: 6px 0 4px;
+}
+
+.opening-header p {
+  margin: 0;
+  max-width: 640px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.tab {
+  padding: 8px 18px;
+  font-size: 0.95rem;
+}
+
+.tab-active {
+  background: #3b6ea8;
+  border-color: #3b6ea8;
+  color: white;
+}
+
+.tab-active:hover {
+  background: #2f5a8a;
+}
+
+.source {
+  padding: 0 24px 24px;
+  font-size: 0.8rem;
+}
+
+.line-name {
+  font-weight: 400;
+  color: #555;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip {
+  font-size: 0.72rem;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: #eef1f5;
+  color: #445;
+  margin-left: 4px;
+}
+
+.chips .chip {
+  margin-left: 0;
+}
+
+.verdict-white {
+  background: #e6f4ea;
+  color: #1e6b34;
+}
+
+.verdict-black {
+  background: #3a3a3a;
+  color: white;
+}
+
+.verdict-even {
+  background: #eee;
+  color: #444;
+}
+
+.tag-trap,
+.tag-mistake {
+  background: #fde8e8;
+  color: #a12020;
+}
+
+.tag-checkmate,
+.tag-fork {
+  background: #fff1d6;
+  color: #8a5a00;
+}
+
+.opening-note p {
+  line-height: 1.5;
+}
+
+.line-list,
+.reply-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.line-list button,
+.reply-list button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+  border: none;
+  border-bottom: 1px solid #eee;
+  border-radius: 0;
+  padding: 6px 4px;
+}
+
+.reply-list button {
+  flex-direction: column;
+  gap: 2px;
+}
+
+.reply-move {
+  font-family: monospace;
+  font-weight: 700;
+}
+
+.line-active {
+  background: #e8f0e0;
+}
+
+.off-book {
+  border-left: 4px solid #e07b00;
 }

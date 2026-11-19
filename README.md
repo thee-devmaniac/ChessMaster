@@ -35,7 +35,9 @@ npm run test:watch  # re-run on every save
 | `public/engine/` | Stockfish WASM files (copied on install) | Done (M2) |
 | `src/components/analysis/` | Evaluation bar, engine panel, review panel | Done (M5) |
 | `src/hooks/` | React hooks: engine lifecycle, live analysis | Done (M5) |
-| `src/data/openings/` | Opening trees (King's Gambit) | Later |
+| `src/lib/openings/` | Opening lesson types, builder (checks every move), navigation | Done (M7) |
+| `src/data/openings/` | Authored opening lines: King's Gambit | Done (M7) |
+| `src/components/openings/` | Learn and Explore modes | Done (M7) |
 
 Rule: only `src/components/board/ChessBoard.tsx` imports react-chessboard, and
 only `src/lib/chess/` imports chess.js. Everything else uses our own types.
@@ -48,6 +50,8 @@ only `src/lib/chess/` imports chess.js. Everything else uses our own types.
 - [x] 4. History and navigation (plus PGN import)
 - [x] 5. Live analysis and review
 - [x] 6. Variations: the game is a move tree; other moves become side lines
+- [x] 7. King's Gambit lessons: Learn and Explore modes (`/openings/kings-gambit`)
+- [ ] 8. Predict and Practice modes
 Rule: only `src/lib/engine/` talks to Stockfish.
 
 ## How the review works
@@ -61,3 +65,10 @@ view. Evaluations are clamped to ±10 pawns. Thresholds live in
 
 Stockfish is GPL-licensed. Fine for personal use; if this app is ever
 distributed, its source must be made available under the GPL too.
+
+## Adding opening lines
+
+Lines live in `src/data/openings/kingsGambit.ts` as nested moves in standard
+notation, each with an explanation. The first entry in `next` is the main
+line. Positions are computed by chess.js when the page loads, and
+`npm test` fails if any move is illegal, so a typo can't slip through.

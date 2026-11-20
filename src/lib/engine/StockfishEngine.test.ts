@@ -127,3 +127,35 @@ describe("StockfishEngine", () => {
     expect(worker.terminated).toBe(true);
   });
 });
+
+describe("StockfishEngine: several top lines (MultiPV)", () => {
+  it("sets MultiPV only when it changes, and returns every line, best first", async () => {
+    const worker = new FakeWorker();
+    const engine = new StockfishEngine(() => worker);
+    await engine.whenReady();
+
+    const result = engine.analyse(WHITE_TO_MOVE, { depth: 5 }, undefined, { multiPv: 2 });
+    await flush();
+    expect(worker.sent).toContain("setoption name MultiPV value 2");
+    worker.emit("info depth 5 multipv 1 score cp 30 pv e2e4 e7e5");
+    worker.emit("info depth 5 multipv 2 score cp 20 pv d2d4");
+    worker.emit("bestmove e2e4");
+    const a = await result;
+    expect(a.score).toEqual({ type: "cp", cp: 30 }); // the main result is still the best line
+    expect(a.lines).toEqual([
+      { score: { type: "cp", cp: 30 }, pv: ["e2e4", "e7e5"] },
+      { score: { type: "cp", cp: 20 }, pv: ["d2d4"] },
+    ]);
+
+    // Back to one line: MultiPV is reset, and no `lines` are returned.
+    const next = engine.analyse(WHITE_TO_MOVE, { depth: 5 });
+    await flush();
+    expect(worker.sent.filter((m) => m.startsWith("setoption"))).toEqual([
+      "setoption name MultiPV value 2",
+      "setoption name MultiPV value 1",
+    ]);
+    worker.emit("info depth 5 multipv 1 score cp 30 pv e2e4");
+    worker.emit("bestmove e2e4");
+    expect((await next).lines).toBeUndefined();
+  });
+});

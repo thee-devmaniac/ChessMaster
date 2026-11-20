@@ -21,6 +21,8 @@ export type Score =
 /** One parsed "info ..." line from Stockfish. */
 export interface UciInfo {
   depth: number;
+  /** Which of the engine's top lines this is: 1 = best (only 1 unless MultiPV is set). */
+  multipv: number;
   score: UciScore;
   /** Principal variation: the line the engine expects, in UCI notation ("e2e4"). */
   pv: string[];
@@ -35,6 +37,17 @@ export interface Analysis {
   /** Best move in UCI notation ("e2e4", "e7e8q"), or null if there are no legal moves. */
   bestMove: string | null;
   pv: string[];
+  /**
+   * The engine's top lines, best first, when more than one was asked for
+   * (the `multiPv` option). Each has its score from White's point of view.
+   */
+  lines?: { score: Score; pv: string[] }[];
+}
+
+/** Extra search options. */
+export interface AnalyseOptions {
+  /** How many top lines to report (Stockfish's "MultiPV"). Default 1. */
+  multiPv?: number;
 }
 
 /** How long to think: a fixed depth (consistent, good for review) or a time limit in ms (good for live use). */

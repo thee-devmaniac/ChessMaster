@@ -6,7 +6,7 @@ import { MoveList } from "@/components/board/MoveList";
 import { PromotionPicker } from "@/components/board/PromotionPicker";
 import { buildSquareStyles } from "@/components/board/highlights";
 import { STARTING_FEN } from "@/lib/chess/fen";
-import { checkedKingSquare, turn, type MoveInput, type PromotionPiece } from "@/lib/chess/rules";
+import { checkedKingSquare, importPgn, turn, type MoveInput, type PromotionPiece } from "@/lib/chess/rules";
 import { describeStatus } from "@/lib/chess/describe";
 import { useKeyboardNav } from "@/hooks/useKeyboardNav";
 import { IDLE, choosePromotion, clickSquare, type ClickState } from "@/lib/chess/clickToMove";
@@ -14,6 +14,7 @@ import { currentFen, currentStatus, newSession, recordOf, sessionReducer, type S
 import { ROOT, continuation, has, isMainLine, lineThrough, moveNumberOf } from "@/lib/chess/tree";
 import { TimePanel } from "@/components/analysis/TimePanel";
 import { ImportPanel } from "@/components/analysis/ImportPanel";
+import { takeQueuedGame } from "@/lib/chess/handoff";
 import { hasClockData, moveTimings, type MoveTiming } from "@/lib/review/time";
 import { EvalBar } from "@/components/analysis/EvalBar";
 import { EnginePanel } from "@/components/analysis/EnginePanel";
@@ -67,6 +68,27 @@ export default function Home() {
   const reviewAbort = useRef<AbortController | null>(null);
   // Stop a running review if the page closes.
   useEffect(() => () => reviewAbort.current?.abort(), []);
+
+  // A game sent from the Play page ("Review this game"): load it once, then review it.
+  // The ref holds how many moves the game has, so the review starts only once
+  // the tree really contains them (both effects first run in the same instant,
+  // before the loaded game has reached the tree).
+  const reviewWhenLoaded = useRef<number | null>(null);
+  useEffect(() => {
+    const pgn = takeQueuedGame();
+    if (!pgn) return;
+    const result = importPgn(pgn);
+    if (!result.ok || result.game.moves.length === 0) return;
+    reviewWhenLoaded.current = result.game.moves.length;
+    dispatch({ type: "load", game: result.game });
+  }, []);
+  useEffect(() => {
+    if (reviewWhenLoaded.current === null || continuation(tree, ROOT).length !== reviewWhenLoaded.current) return;
+    reviewWhenLoaded.current = null;
+    startReview();
+    // startReview reads the tree of this render, which now holds the handed-over game.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tree]);
 
   /** Reviews the line through the position on screen: the main line, or the variation you are in. */
   async function startReview() {

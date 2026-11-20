@@ -1,4 +1,4 @@
-import type { Analysis, SearchLimit, Score, UciInfo } from "./types";
+import type { Analysis, AnalyseOptions, SearchLimit, Score, UciInfo } from "./types";
 import { parseBestMove, parseInfoLine } from "./uci";
 import { sideToMove, toWhitePov } from "./score";
 
@@ -27,7 +27,11 @@ interface Job {
   onInfo?: (partial: { depth: number; score: Score; pv: string[] }) => void;
   resolve: (a: Analysis) => void;
   reject: (e: Error) => void;
+  /** The latest info for the best line (multipv 1). */
   lastInfo: UciInfo | null;
+  /** How many top lines were asked for, and the latest info for each (index 1 = best). */
+  multiPv: number;
+  lines: Map<number, UciInfo>;
   cancelled: boolean;
 }
 
@@ -48,6 +52,8 @@ export class StockfishEngine {
   private waiters: { token: string; resolve: () => void }[] = [];
   private running: Job | null = null;
   private pending: Job | null = null;
+  /** The MultiPV setting the engine currently has (Stockfish starts with 1). */
+  private multiPv = 1;
 
   constructor(createWorker: () => EngineWorker) {
     this.worker = createWorker();
@@ -78,10 +84,21 @@ export class StockfishEngine {
     fen: string,
     limit: SearchLimit,
     onInfo?: Job["onInfo"],
+    options: AnalyseOptions = {},
   ): Promise<Analysis> {
     await this.ready;
     return new Promise<Analysis>((resolve, reject) => {
-      const job: Job = { fen, limit, onInfo, resolve, reject, lastInfo: null, cancelled: false };
+      const job: Job = {
+        fen,
+        limit,
+        onInfo,
+        resolve,
+        reject,
+        lastInfo: null,
+        multiPv: Math.max(1, options.multiPv ?? 1),
+        lines: new Map(),
+        cancelled: false,
+      };
 
       if (!this.running) {
         this.start(job);
@@ -118,6 +135,11 @@ export class StockfishEngine {
 
   private start(job: Job) {
     this.running = job;
+    // Options can only change while the engine is idle, which it is here.
+    if (job.multiPv !== this.multiPv) {
+      this.send(`setoption name MultiPV value ${job.multiPv}`);
+      this.multiPv = job.multiPv;
+    }
     this.send(`position fen ${job.fen}`);
     this.send(
       "depth" in job.limit
@@ -149,6 +171,8 @@ export class StockfishEngine {
     const info = parseInfoLine(line);
     if (info) {
       if (job.cancelled) return;
+      job.lines.set(info.multipv, info);
+      if (info.multipv !== 1) return; // progress and the main result follow the best line
       job.lastInfo = info;
       job.onInfo?.({
         depth: info.depth,
@@ -173,6 +197,11 @@ export class StockfishEngine {
           : { type: "cp", cp: 0 },
         bestMove: best,
         pv: last?.pv ?? [],
+        ...(job.multiPv > 1 && {
+          lines: [...job.lines.entries()]
+            .sort(([a], [b]) => a - b)
+            .map(([, info]) => ({ score: toWhitePov(info.score, sideToMove(job.fen)), pv: info.pv })),
+        }),
       });
     }
     const next = this.pending;

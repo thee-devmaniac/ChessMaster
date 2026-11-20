@@ -8,6 +8,7 @@ describe("parseInfoLine", () => {
       "info depth 12 seldepth 20 multipv 1 score cp -2521 nodes 4597 nps 72968 hashfull 3 time 63 pv g7g6 a2a4 h7h6";
     expect(parseInfoLine(line)).toEqual({
       depth: 12,
+      multipv: 1,
       score: { type: "cp", value: -2521 },
       pv: ["g7g6", "a2a4", "h7h6"],
     });
@@ -22,16 +23,25 @@ describe("parseInfoLine", () => {
   it("parses 'mate 0' (side to move is already checkmated) with an empty pv", () => {
     expect(parseInfoLine("info depth 0 score mate 0")).toEqual({
       depth: 0,
+      multipv: 1,
       score: { type: "mate", value: 0 },
       pv: [],
     });
   });
 
-  it("ignores lines without a score, bound scores and secondary lines", () => {
+  it("reads which line it is when the engine reports several (MultiPV)", () => {
+    expect(parseInfoLine("info depth 10 multipv 2 score cp 10 pv d2d4")).toEqual({
+      depth: 10,
+      multipv: 2,
+      score: { type: "cp", value: 10 },
+      pv: ["d2d4"],
+    });
+  });
+
+  it("ignores lines without a score and bound scores", () => {
     expect(parseInfoLine("info string NNUE evaluation using nn-xxx.nnue")).toBeNull();
     expect(parseInfoLine("info depth 5 currmove e2e4 currmovenumber 1")).toBeNull();
     expect(parseInfoLine("info depth 10 score cp 30 lowerbound nodes 100 pv e2e4")).toBeNull();
-    expect(parseInfoLine("info depth 10 multipv 2 score cp 10 pv d2d4")).toBeNull();
     expect(parseInfoLine("bestmove e2e4")).toBeNull();
   });
 });

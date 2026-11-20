@@ -28,6 +28,15 @@ const FEATURES = [
     accent: "gold",
   },
   {
+    symbol: "♖",
+    mark: "Play",
+    title: "Play the bot, then learn from it",
+    text: "Five levels, from Pawn to Queen. Play a full game with no engine help, then review it: every mistake on both sides is marked.",
+    tags: ["5 levels", "Take back", "Review after"],
+    href: "/play",
+    accent: "gold",
+  },
+  {
     symbol: "♘",
     mark: "Explore",
     title: "Ask “what if?”",

@@ -4,6 +4,9 @@ import type { UciInfo, UciScore } from "./types";
  * Parses one "info" line, e.g.
  *   info depth 12 seldepth 20 multipv 1 score cp -2521 nodes 4597 ... pv g7g6 a2a4
  *
+ * `multipv` says which of the top lines it is (1 = best); it is 1 when the
+ * engine reports a single line.
+ *
  * Returns null for lines we don't need: lines with no score (e.g. "info string ..."
  * or "info currmove ..."), and "lowerbound"/"upperbound" scores, which are only
  * temporary guesses made while the engine is still searching.
@@ -13,6 +16,7 @@ export function parseInfoLine(line: string): UciInfo | null {
   const tokens = line.trim().split(/\s+/);
 
   let depth: number | null = null;
+  let multipv = 1;
   let score: UciScore | null = null;
   let pv: string[] = [];
 
@@ -20,8 +24,8 @@ export function parseInfoLine(line: string): UciInfo | null {
     const t = tokens[i];
     if (t === "depth") {
       depth = Number(tokens[++i]);
-    } else if (t === "multipv" && tokens[i + 1] !== "1") {
-      return null; // only the best line (multipv 1) matters for now
+    } else if (t === "multipv") {
+      multipv = Number(tokens[++i]);
     } else if (t === "score") {
       const kind = tokens[++i];
       const value = Number(tokens[++i]);
@@ -34,7 +38,7 @@ export function parseInfoLine(line: string): UciInfo | null {
   }
 
   if (depth === null || Number.isNaN(depth) || score === null) return null;
-  return { depth, score, pv };
+  return { depth, multipv, score, pv };
 }
 
 /**

@@ -1762,3 +1762,55 @@ button:disabled {
     animation: none;
   }
 }
+
+/* ---------- 19. Play the bot ---------- */
+.level-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.level-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+}
+
+.level-option strong {
+  display: block;
+  font-family: var(--font-display-stack);
+  color: var(--primary-bright);
+}
+
+.level-option .muted {
+  display: block;
+  font-size: 0.8rem;
+}
+
+.level-symbol {
+  font-size: 1.8rem;
+  line-height: 1;
+  width: 1.4em;
+  text-align: center;
+  color: var(--primary);
+}
+
+.level-active {
+  border-color: var(--primary);
+  background: rgba(212, 175, 55, 0.1);
+}
+
+/* The main action on a card (start a game, review it). */
+.btn-start {
+  border-color: var(--primary);
+  color: var(--primary-bright);
+}
+
+/* A second click is needed to resign: the button turns red to show it. */
+.btn-danger {
+  border-color: #d03b3b;
+  color: #f2a7a7;
+}

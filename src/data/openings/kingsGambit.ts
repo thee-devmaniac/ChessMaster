@@ -14,6 +14,9 @@ import type { OpeningSpec } from "@/lib/openings/types";
 export const kingsGambit: OpeningSpec = {
   id: "kings-gambit",
   name: "King's Gambit",
+  playAs: "w",
+  moveOrder: "1. e4 e5 2. f4",
+  summary: "An old attacking gambit: White gives a pawn to open lines towards Black's king.",
   intro:
     "One of the oldest and most aggressive openings. After 1. e4 e5, White offers a pawn with 2. f4 to open the f-file and build a big centre, at the cost of loosening the squares around the king.",
   source: "Lines from an MCO-style opening reference; explanations written for this app.",

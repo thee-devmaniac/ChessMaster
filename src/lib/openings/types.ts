@@ -28,6 +28,15 @@ export type Tag =
   | "fork"
   | "checkmate";
 
+/**
+ * A move that is just as good as the lesson's move but isn't a line of its own.
+ * In Predict it counts as a correct answer; `note` says why it's fine.
+ */
+export interface AlsoGood {
+  san: string;
+  note: string;
+}
+
 /** One authored move, plus the moves that can follow it. */
 export interface MoveSpec {
   /** The move in standard notation, e.g. "Nf3", "exd5", "O-O". */
@@ -39,6 +48,8 @@ export interface MoveSpec {
   /** Assessment of the position after this move. */
   verdict?: Verdict;
   tags?: Tag[];
+  /** Equally good moves in the same position (accepted as correct in Predict). */
+  alsoGood?: AlsoGood[];
   /** Possible next moves. The first one is the main line. */
   next?: MoveSpec[];
 }
@@ -46,6 +57,12 @@ export interface MoveSpec {
 export interface OpeningSpec {
   id: string;
   name: string;
+  /** The side the learner plays: sets the board's direction and the side quizzed and practised. */
+  playAs: "w" | "b";
+  /** The moves that define the opening, shown above the title (e.g. "1. e4 c6"). */
+  moveOrder: string;
+  /** One line for the list of openings. */
+  summary: string;
   /** A short introduction shown before the first move. */
   intro: string;
   /** Where the material for this lesson comes from. */
@@ -72,12 +89,16 @@ export interface OpeningNode {
   name?: string;
   verdict?: Verdict;
   tags: Tag[];
+  alsoGood: AlsoGood[];
   children: string[];
 }
 
 export interface Opening {
   id: string;
   name: string;
+  playAs: "w" | "b";
+  moveOrder: string;
+  summary: string;
   intro: string;
   source: string;
   nodes: Record<string, OpeningNode>;

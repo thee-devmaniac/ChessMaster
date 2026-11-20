@@ -50,6 +50,9 @@ describe("King's Gambit data", () => {
     const bad: OpeningSpec = {
       id: "bad",
       name: "Bad",
+      playAs: "w",
+      moveOrder: "",
+      summary: "",
       intro: "",
       source: "",
       moves: [{ san: "e4", explanation: "", next: [{ san: "Ke7", explanation: "" }] }],

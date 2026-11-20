@@ -28,7 +28,7 @@ const ALT_ARROW = ARROW.alt; // pale blue: other book moves
 export function ExploreMode({ opening }: { opening: Opening }) {
   const [session, dispatch] = useReducer(sessionReducer, undefined, () => newSession());
   const [click, setClick] = useState<ClickState>(IDLE);
-  const [orientation, setOrientation] = useState<Orientation>("white");
+  const [orientation, setOrientation] = useState<Orientation>(opening.playAs === "w" ? "white" : "black");
   const [showHints, setShowHints] = useState(true);
 
   const { tree, current } = session;

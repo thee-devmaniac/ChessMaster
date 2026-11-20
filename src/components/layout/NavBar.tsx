@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 const LINKS = [
   { href: "/analyse", label: "Analyse" },
-  { href: "/openings/kings-gambit", label: "Openings" },
+  { href: "/openings", label: "Openings" },
 ];
 
 /** The top bar on every page: logo, section links (current one in gold) and the main call to action. */

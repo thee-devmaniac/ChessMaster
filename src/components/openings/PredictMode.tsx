@@ -39,14 +39,17 @@ const FRESH: Phase = { kind: "quiz", hints: 0, missed: false };
 export function PredictMode({ opening }: { opening: Opening }) {
   const lines = useMemo(() => allLines(opening), [opening]);
   const [lineIndex, setLineIndex] = useState(0);
-  const [side, setSide] = useState<QuizSide>("both");
+  const [side, setSide] = useState<QuizSide>(opening.playAs);
   const [step, setStep] = useState(0);
   const [phase, setPhase] = useState<Phase>(FRESH);
   const [results, setResults] = useState<Record<string, Outcome>>({});
   const [click, setClick] = useState<ClickState>(IDLE);
-  const [orientation, setOrientation] = useState<Orientation>("white");
+  const [orientation, setOrientation] = useState<Orientation>(opening.playAs === "w" ? "white" : "black");
   // The square to flash gold after a correct guess (cleared after the animation).
   const [flash, setFlash] = useState<string | null>(null);
+  // Shown after an "also good" guess: the move was right, but the lesson carries on with its own move.
+  // `atStep` keeps it on screen only while the board still shows the lesson's move.
+  const [alsoGood, setAlsoGood] = useState<{ san: string; note: string; lessonMove: string; atStep: number } | null>(null);
   useEffect(() => {
     if (!flash) return;
     const timer = setTimeout(() => setFlash(null), 700);
@@ -86,6 +89,7 @@ export function PredictMode({ opening }: { opening: Opening }) {
     setPhase(FRESH);
     setResults({});
     setClick(IDLE);
+    setAlsoGood(null);
   }
 
   /** Moves on past the quiz move, recording how it went. */
@@ -100,8 +104,10 @@ export function PredictMode({ opening }: { opening: Opening }) {
     const played = makeMove(node.fen, move);
     if (!played) return;
     const result = checkGuess(opening, next, played.san);
-    if (result.kind === "correct") {
+    setAlsoGood(null);
+    if (result.kind === "correct" || result.kind === "also-good") {
       setFlash(played.to);
+      if (result.kind === "also-good") setAlsoGood({ san: played.san, note: result.note, lessonMove: moveLabel(next), atStep: step + 1 });
       advance(phase.hints > 0 || phase.missed ? "with help" : "first try");
     }
     else setPhase({ kind: "wrong", hints: phase.hints, played, result });
@@ -168,6 +174,14 @@ export function PredictMode({ opening }: { opening: Opening }) {
         </div>
 
         {/* What just happened: the explanation of the last move played. */}
+        {alsoGood?.atStep === step && phase.kind !== "wrong" && (
+          <section className="card verdict-good" role="status">
+            <h2>{alsoGood.san} works too!</h2>
+            <p>
+              {alsoGood.note} This lesson continues with <strong>{alsoGood.lessonMove}</strong>, shown on the board.
+            </p>
+          </section>
+        )}
         {phase.kind !== "wrong" && <OpeningNote node={node} intro={opening.intro} />}
 
         {next === null ? (

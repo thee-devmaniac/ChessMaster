@@ -23,7 +23,7 @@ const REPLY_DELAY_MS = 600;
  * those too. Leaving the book stops the practice and shows what was expected.
  */
 export function PracticeMode({ opening }: { opening: Opening }) {
-  const [side, setSide] = useState<"w" | "b">("w");
+  const [side, setSide] = useState<"w" | "b">(opening.playAs);
   const [mainOnly, setMainOnly] = useState(false);
   const [session, dispatch] = useReducer(sessionReducer, undefined, () => newSession());
   const [click, setClick] = useState<ClickState>(IDLE);

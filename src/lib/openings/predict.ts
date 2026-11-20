@@ -21,6 +21,8 @@ export function isQuizMove(opening: Opening, node: OpeningNode, side: QuizSide):
 
 export type GuessResult =
   | { kind: "correct" }
+  /** Not the lesson's move, but just as good (the lesson then carries on with its own move). */
+  | { kind: "also-good"; note: string }
   /** Another move from the book that is fine, but this line goes a different way. */
   | { kind: "other-book"; node: OpeningNode }
   /** A move the book knows and marks as a mistake (its explanation says why). */
@@ -35,6 +37,8 @@ export type GuessResult =
  */
 export function checkGuess(opening: Opening, expected: OpeningNode, guessSan: string): GuessResult {
   if (guessSan === expected.san) return { kind: "correct" };
+  const alt = expected.alsoGood.find((a) => a.san === guessSan);
+  if (alt) return { kind: "also-good", note: alt.note };
   const parent = opening.nodes[expected.parent!];
   const sibling = parent.children.map((id) => opening.nodes[id]).find((n) => n.san === guessSan);
   if (!sibling) return { kind: "wrong" };

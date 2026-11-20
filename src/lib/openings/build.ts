@@ -19,6 +19,7 @@ export function buildOpening(spec: OpeningSpec): Opening {
       moveNumber: 0,
       explanation: spec.intro,
       tags: [],
+      alsoGood: [],
       children: [],
     },
   };
@@ -34,6 +35,14 @@ export function buildOpening(spec: OpeningSpec): Opening {
     }
     // Use chess.js's spelling of the move (e.g. it adds "+" for check).
     const id = parentId ? `${parentId} ${played.san}` : played.san;
+    // "Also good" moves must be legal in the same position (checked like any other move).
+    const alsoGood = (move.alsoGood ?? []).map((alt) => {
+      try {
+        return { san: new Chess(parent.fen).move(alt.san).san, note: alt.note };
+      } catch {
+        throw new Error(`Illegal "also good" move "${alt.san}" after "${parentId || "start"}" in ${spec.name}`);
+      }
+    });
     if (nodes[id]) throw new Error(`Duplicate move "${played.san}" after "${parentId || "start"}" in ${spec.name}`);
 
     nodes[id] = {
@@ -48,6 +57,7 @@ export function buildOpening(spec: OpeningSpec): Opening {
       name: move.name,
       verdict: move.verdict,
       tags: move.tags ?? [],
+      alsoGood,
       children: [],
     };
     parent.children.push(id);
@@ -55,5 +65,14 @@ export function buildOpening(spec: OpeningSpec): Opening {
   }
 
   for (const first of spec.moves) add(OPENING_ROOT, first);
-  return { id: spec.id, name: spec.name, intro: spec.intro, source: spec.source, nodes };
+  return {
+    id: spec.id,
+    name: spec.name,
+    playAs: spec.playAs,
+    moveOrder: spec.moveOrder,
+    summary: spec.summary,
+    intro: spec.intro,
+    source: spec.source,
+    nodes,
+  };
 }

@@ -23,7 +23,7 @@ export function LearnMode({ opening }: { opening: Opening }) {
   const [lineIndex, setLineIndex] = useState(0);
   const [step, setStep] = useState(0); // number of moves played along the line
   const [showNext, setShowNext] = useState(true);
-  const [orientation, setOrientation] = useState<Orientation>("white");
+  const [orientation, setOrientation] = useState<Orientation>(opening.playAs === "w" ? "white" : "black");
 
   const line = lines[lineIndex];
   const node = opening.nodes[step === 0 ? OPENING_ROOT : line.ids[step - 1]];

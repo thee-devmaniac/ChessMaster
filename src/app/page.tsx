@@ -39,10 +39,10 @@ const FEATURES = [
   {
     symbol: "♗",
     mark: "Openings",
-    title: "Learn the King’s Gambit",
-    text: "Walk through the lines, explore freely, predict each move with hints, then practise against book replies.",
+    title: "Learn your openings",
+    text: "The London System, the Caro-Kann and the King’s Gambit. Walk through the lines, explore freely, predict each move with hints, then practise against book replies.",
     tags: ["Learn", "Explore", "Predict", "Practice"],
-    href: "/openings/kings-gambit",
+    href: "/openings",
     accent: "arc",
   },
 ];
@@ -71,8 +71,8 @@ export default function Landing() {
           <Link href="/analyse" className="btn-gold">
             Review a game
           </Link>
-          <Link href="/openings/kings-gambit" className="btn-arc">
-            Study the King&apos;s Gambit
+          <Link href="/openings" className="btn-arc">
+            Study an opening
           </Link>
         </div>
         <dl className="facts">

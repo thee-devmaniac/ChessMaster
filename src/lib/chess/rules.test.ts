@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { STARTING_FEN } from "./fen";
-import { checkedKingSquare, gameStatus, legalTargets, makeMove, type MoveInput } from "./rules";
+import { checkedKingSquare, gameStatus, legalTargets, makeMove, sanToMove, type MoveInput } from "./rules";
 
 /** Plays moves given as "e2e4" / "a7a8q" strings, failing loudly on an illegal one. */
 function playAll(fen: string, uciMoves: string[]): string {
@@ -135,5 +135,14 @@ describe("game status", () => {
 
   it("says whose turn it is in a normal position", () => {
     expect(gameStatus(STARTING_FEN)).toEqual({ kind: "playing", turn: "w", inCheck: false });
+  });
+});
+
+describe("sanToMove", () => {
+  it("reads standard notation, including castling and promotion", () => {
+    expect(sanToMove(STARTING_FEN, "Nf3")).toEqual({ from: "g1", to: "f3", promotion: undefined });
+    expect(sanToMove("4k3/8/8/8/8/8/8/4K2R w K - 0 1", "O-O")).toMatchObject({ from: "e1", to: "g1" });
+    expect(sanToMove("7k/1P6/8/8/8/8/8/K7 w - - 0 1", "b8=Q+")).toEqual({ from: "b7", to: "b8", promotion: "q" });
+    expect(sanToMove(STARTING_FEN, "Ke2")).toBeNull();
   });
 });

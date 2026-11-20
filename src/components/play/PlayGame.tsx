@@ -1,13 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChessBoard } from "@/components/board/ChessBoard";
 import { MoveList } from "@/components/board/MoveList";
 import { PromotionPicker } from "@/components/board/PromotionPicker";
 import { buildSquareStyles } from "@/components/board/highlights";
+import { ARROW } from "@/components/board/theme";
+import type { BoardArrow } from "@/components/board/ChessBoard";
+import { CoachPanel } from "./CoachPanel";
+import { needsDecision, useCoach } from "./useCoach";
+import type { Classification } from "@/lib/review/classify";
 import { useStockfish } from "@/hooks/useStockfish";
-import { BOT_LEVELS, chooseBotMove, levelById, scoreFor, type BotLevel, type Candidate } from "@/lib/bot/levels";
+import { BOT_LEVELS, BOT_MAX_THINK_MS, chooseBotMove, levelById, scoreFor, type BotLevel, type Candidate } from "@/lib/bot/levels";
 import { canTakeBack, fenOfGame, resultOf, takeBack, toPgn, type BotGame } from "@/lib/bot/game";
 import { IDLE, choosePromotion, clickSquare, type ClickState } from "@/lib/chess/clickToMove";
 import { STARTING_FEN } from "@/lib/chess/fen";
@@ -29,9 +34,10 @@ const DRAW_ACCEPT_LEVEL_CP = 30;
 const NAME: Record<Color, string> = { w: "White", b: "Black" };
 
 /**
- * Play a full game against the bot. There is deliberately no engine help
- * while you play (no evaluation bar, no best-move arrow): the game is real
- * practice. Afterwards, "Review this game" opens it on the Analyse page.
+ * Play a full game against the bot. With coach mode on, the coach judges
+ * each of your moves (and lets you try again after a mistake) and explains
+ * each of the bot's moves. With it off, there is no engine help at all: a
+ * real test. Afterwards, "Review this game" opens it on the Analyse page.
  */
 export function PlayGame() {
   const router = useRouter();
@@ -49,6 +55,19 @@ export function PlayGame() {
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmResign, setConfirmResign] = useState(false);
 
+  // ---- Coach mode ----
+  const [coachOn, setCoachOn] = useState(true);
+  const coach = useCoach(coachOn);
+  // After a mistake: did you choose to play on, ask to see a better move, and is a hint arrow showing?
+  const [playOn, setPlayOn] = useState(false);
+  const [showBetter, setShowBetter] = useState(false);
+  const [hintUci, setHintUci] = useState<string | null>(null);
+  // The bot's effect calls the coach through a ref, so a new render doesn't restart the bot's search.
+  const onBotMoveRef = useRef(coach.onBotMove);
+  useEffect(() => {
+    onBotMoveRef.current = coach.onBotMove;
+  });
+
   const level = levelById(levelId);
   const player = game?.player;
   const fen = game ? fenOfGame(game) : STARTING_FEN;
@@ -56,15 +75,20 @@ export function PlayGame() {
   const playing = result?.kind === "playing";
   const botToMove = playing && turn(fen) !== player;
   const yourMove = playing && turn(fen) === player;
+  // In coach mode the bot waits while the coach checks your move, and after a mistake until you decide.
+  const v = coach.verdict;
+  const coachChecking = coachOn && v?.forFen === fen && v.status === "checking";
+  const coachWaiting = coachOn && v?.forFen === fen && v.status === "done" && needsDecision(v.v) && !playOn;
+  const botMayMove = botToMove && !coachChecking && !coachWaiting;
 
   // ---- The bot's turn: ask the engine for its top moves, then pick one for this level ----
   useEffect(() => {
-    if (!engine || !botToMove || !player) return;
+    if (!engine || !botMayMove || !player) return;
     let active = true;
     const started = Date.now();
     const bot: Color = player === "w" ? "b" : "w";
     engine
-      .analyse(fen, { depth: level.depth }, undefined, { multiPv: level.multiPv })
+      .analyse(fen, { depth: level.depth, maxMs: BOT_MAX_THINK_MS }, undefined, { multiPv: level.multiPv })
       .then(async (a) => {
         const lines = a.lines ?? [{ score: a.score, pv: a.pv }];
         const candidates: Candidate[] = lines.filter((l) => l.pv.length > 0).map((l) => ({ uci: l.pv[0], score: l.score }));
@@ -78,6 +102,7 @@ export function PlayGame() {
         setBotView(scoreFor(a.score, bot));
         // Only add the move if the game hasn't changed meanwhile (a take-back or a new game).
         setGame((g) => (g && fenOfGame(g) === fen ? { ...g, moves: [...g.moves, move] } : g));
+        onBotMoveRef.current(fen, move, bot);
       })
       .catch((e) => {
         if (!(e instanceof AnalysisCancelledError) && active) setNotice(`The bot had a problem: ${String(e)}`);
@@ -86,7 +111,7 @@ export function PlayGame() {
       active = false;
       engine.cancel();
     };
-  }, [engine, botToMove, fen, player, level]);
+  }, [engine, botMayMove, fen, player, level]);
 
   // ---- Your moves ----
   function play(move?: MoveInput) {
@@ -95,7 +120,11 @@ export function PlayGame() {
     if (!played) return;
     setNotice(null);
     setConfirmResign(false);
+    setPlayOn(false);
+    setShowBetter(false);
+    setHintUci(null);
     setGame({ ...game, moves: [...game.moves, played] });
+    coach.onPlayerMove(fen, played, game.player);
   }
 
   function handleSquareClick(square: string) {
@@ -115,6 +144,10 @@ export function PlayGame() {
   function start() {
     const side: Color = colorChoice === "random" ? (Math.random() < 0.5 ? "w" : "b") : colorChoice;
     setGame({ startFen: STARTING_FEN, moves: [], player: side });
+    coach.reset();
+    setPlayOn(false);
+    setShowBetter(false);
+    setHintUci(null);
     setClick(IDLE);
     setBotView(null);
     setNotice(null);
@@ -123,6 +156,7 @@ export function PlayGame() {
 
   function newGame() {
     engine?.cancel();
+    coach.reset();
     setGame(null);
     setClick(IDLE);
     setNotice(null);
@@ -131,7 +165,14 @@ export function PlayGame() {
   function handleTakeBack() {
     if (!game) return;
     engine?.cancel();
-    setGame(takeBack(game));
+    const back = takeBack(game);
+    // If the coach had shown a better move for the move taken back, keep it as a gold arrow.
+    const better = v?.status === "done" && showBetter && v.forFen === fen ? v.v.bestUci : null;
+    setGame(back);
+    coach.onTakeBack(fenOfGame(back));
+    setHintUci(better);
+    setShowBetter(false);
+    setPlayOn(false);
     setClick(IDLE);
     setNotice(null);
   }
@@ -175,20 +216,33 @@ export function PlayGame() {
   const current = continuation(tree, ROOT).at(-1) ?? ROOT;
   const lastMove = game?.moves.at(-1);
   const squareStyles = buildSquareStyles({ click, lastMove, checkSquare: checkedKingSquare(fen) });
+  const arrows: BoardArrow[] = hintUci ? [{ from: hintUci.slice(0, 2), to: hintUci.slice(2, 4), color: ARROW.best }] : [];
+  // The coach's ?! ? ?? marks on your moves in the move list.
+  const annotations: Record<string, Classification> = {};
+  continuation(tree, ROOT).forEach((id, i) => {
+    const mark = game && coach.marks[game.moves[i].fenAfter];
+    if (mark) annotations[id] = mark;
+  });
   const orientation = (player ?? (colorChoice === "b" ? "b" : "w")) === "w" ? "white" : "black";
   const inCheck = playing && checkedKingSquare(fen) !== null;
 
   return (
-    <main className="layout">
+    <main className={`layout ${game ? "play-active" : ""}`}>
       <section className="board board-wrap">
-        <ChessBoard fen={fen} orientation={orientation} onSquareClick={handleSquareClick} squareStyles={squareStyles} />
+        <ChessBoard
+          fen={fen}
+          orientation={orientation}
+          onSquareClick={handleSquareClick}
+          squareStyles={squareStyles}
+          arrows={arrows}
+        />
         {click.kind === "choosingPromotion" && (
           <PromotionPicker color={turn(fen)} onChoose={handlePromotion} onCancel={() => setClick(IDLE)} />
         )}
       </section>
 
       <aside className="panel">
-        <div>
+        <div className="play-title">
           <p className="section-tag">Practice game</p>
           <h1 className="page-title">
             <span className="title-outline">Play</span> <span className="title-solid">the bot</span>
@@ -241,14 +295,26 @@ export function PlayGame() {
                   {engine ? "Start game" : "Loading the engine…"}
                 </button>
               </div>
-              <p className="muted">No engine help during the game: it&apos;s real practice. Review it afterwards.</p>
+              <label className="toggle">
+                <input type="checkbox" checked={coachOn} onChange={(e) => setCoachOn(e.target.checked)} />
+                Coach mode: checks your moves and explains the bot&apos;s
+              </label>
+              <p className="muted">
+                {coachOn
+                  ? "Great for learning. Turn it off when you want a real test with no help."
+                  : "No engine help during the game: a real test. Review it afterwards."}
+              </p>
             </section>
           </>
         ) : (
           <>
             <p className={`status ${playing ? "" : "status-over"}`} role="status">
               {playing
-                ? yourMove
+                ? coachChecking
+                  ? "The coach is checking your move…"
+                  : coachWaiting
+                    ? "Try again, or play on?"
+                    : yourMove
                   ? `Your move (${NAME[player!]})${inCheck ? ": you're in check!" : ""}`
                   : `${names.bot} is thinking…`
                 : result!.kind === "win"
@@ -262,7 +328,19 @@ export function PlayGame() {
               You ({NAME[player!]}) vs {names.bot}
             </p>
 
-            <MoveList tree={tree} current={current} onSelect={() => {}} />
+            {coachOn && (
+              <CoachPanel
+                verdict={coach.verdict}
+                botNote={coach.botNote}
+                waitingForYou={coachWaiting}
+                showBetter={showBetter}
+                onTryAgain={handleTakeBack}
+                onShowBetter={() => setShowBetter(true)}
+                onPlayOn={() => setPlayOn(true)}
+              />
+            )}
+
+            <MoveList tree={tree} current={current} onSelect={() => {}} annotations={annotations} />
 
             {notice && <p className="hint">{notice}</p>}
 
@@ -298,6 +376,10 @@ export function PlayGame() {
 
             {playing && (
               <div className="buttons">
+                <label className="toggle">
+                  <input type="checkbox" checked={coachOn} onChange={(e) => setCoachOn(e.target.checked)} />
+                  Coach mode
+                </label>
                 <button onClick={newGame}>Quit to setup</button>
               </div>
             )}

@@ -1814,3 +1814,167 @@ button:disabled {
   border-color: #d03b3b;
   color: #f2a7a7;
 }
+
+/* ---------- 20. Coach mode ---------- */
+.coach p {
+  margin: 0;
+}
+
+.coach-verdict,
+.coach-bot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 10px;
+  border-left: 3px solid var(--line-strong);
+}
+
+/* Same status colours as the review: amber for mistakes, red for blunders. */
+.coach-good {
+  border-left-color: var(--primary);
+}
+
+.coach-inaccuracy {
+  border-left-color: #c9a227;
+}
+
+.coach-mistake {
+  border-left-color: #fab219;
+}
+
+.coach-blunder {
+  border-left-color: #d03b3b;
+}
+
+.coach-bot {
+  border-left-color: var(--arc);
+}
+
+.coach-threat {
+  color: #f2a7a7;
+  font-weight: 600;
+}
+
+.coach-chance {
+  color: var(--primary-bright);
+  font-weight: 600;
+}
+
+/* ---------- 21. Phones and touch screens ---------- */
+/* Fingers need bigger targets than a mouse: about 44px is comfortable. */
+@media (pointer: coarse) {
+  button,
+  select,
+  .tab,
+  .file-button {
+    min-height: 44px;
+  }
+  .file-button {
+    display: inline-flex;
+    align-items: center;
+  }
+  .nav-links a,
+  .logo {
+    display: inline-block;
+    padding: 12px 2px;
+  }
+  .toggle {
+    min-height: 44px;
+  }
+  .toggle input {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (max-width: 720px) {
+  /* The top bar's "Review a game" button repeats the Analyse link: dropping it saves a whole row. */
+  .navbar > .btn-gold {
+    display: none;
+  }
+  /* A lesson's introduction is also shown beside the board at the start, so the board can come up higher. */
+  .opening-header .lede {
+    display: none;
+  }
+  /* The four lesson modes in one row. */
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    width: 100%;
+  }
+  .tab {
+    padding: 9px 4px;
+    letter-spacing: 0.06em;
+  }
+  /* During a game the coach and the status come straight under the board. */
+  .play-active .play-title {
+    display: none;
+  }
+}
+
+/* ---------- 22. First steps (rules lesson) ---------- */
+.hero-newcomer {
+  margin: 14px 0 0;
+  color: var(--text-dim);
+}
+
+.hero-newcomer a {
+  color: var(--arc);
+}
+
+@media (pointer: coarse) {
+  .hero-newcomer a {
+    display: inline-block;
+    padding: 10px 0;
+  }
+}
+
+/* ---------- 23. Text pages (About, Privacy) and footer links ---------- */
+.text-page {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 24px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.text-page h2 {
+  font-family: var(--font-display-stack);
+  font-size: 1.15rem;
+  color: var(--primary-bright);
+  margin: 10px 0 6px;
+}
+
+.text-page p,
+.text-page li {
+  line-height: 1.6;
+}
+
+.text-page ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.text-page a {
+  color: var(--arc);
+}
+
+.credits li {
+  margin-bottom: 4px;
+}
+
+.footer-links {
+  display: flex;
+  gap: 18px;
+}
+
+@media (pointer: coarse) {
+  .footer-links a,
+  .text-page li a {
+    display: inline-block;
+    padding: 10px 0;
+  }
+}

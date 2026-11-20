@@ -141,11 +141,9 @@ export class StockfishEngine {
       this.multiPv = job.multiPv;
     }
     this.send(`position fen ${job.fen}`);
-    this.send(
-      "depth" in job.limit
-        ? `go depth ${job.limit.depth}`
-        : `go movetime ${job.limit.movetimeMs}`,
-    );
+    const l = job.limit;
+    // With both limits, Stockfish stops at whichever it reaches first.
+    this.send("depth" in l ? `go depth ${l.depth}${l.maxMs ? ` movetime ${l.maxMs}` : ""}` : `go movetime ${l.movetimeMs}`);
   }
 
   private cancelRunning() {

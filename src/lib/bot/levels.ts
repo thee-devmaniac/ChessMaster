@@ -79,6 +79,9 @@ export const BOT_LEVELS: BotLevel[] = [
   },
 ];
 
+/** The longest the bot thinks about a move, whatever its depth (protects slow phones). */
+export const BOT_MAX_THINK_MS = 2500;
+
 export function levelById(id: string): BotLevel {
   return BOT_LEVELS.find((l) => l.id === id) ?? BOT_LEVELS[0];
 }

@@ -159,3 +159,17 @@ describe("StockfishEngine: several top lines (MultiPV)", () => {
     expect((await next).lines).toBeUndefined();
   });
 });
+
+describe("StockfishEngine: depth with a time cap", () => {
+  it("sends both limits, so the search stops at whichever comes first", async () => {
+    const worker = new FakeWorker();
+    const engine = new StockfishEngine(() => worker);
+    await engine.whenReady();
+    const result = engine.analyse(WHITE_TO_MOVE, { depth: 14, maxMs: 2500 });
+    await flush();
+    expect(worker.sent).toContain("go depth 14 movetime 2500");
+    worker.emit("info depth 9 multipv 1 score cp 10 pv e1e2");
+    worker.emit("bestmove e1e2");
+    expect((await result).depth).toBe(9); // stopped early by the time cap
+  });
+});

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cinzel, EB_Garamond, Space_Grotesk, Space_Mono } from "next/font/google";
 import Link from "next/link";
 import { NavBar } from "@/components/layout/NavBar";
+import { FEEDBACK_URL } from "@/lib/site";
 import "./globals.css";
 
 /*
@@ -19,8 +20,9 @@ const garamond = EB_Garamond({ subsets: ["latin"], style: ["normal", "italic"], 
 const grotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "Chess Trainer: review your games, learn your openings",
-  description: "Review your games with Stockfish, find your blunders, and learn openings move by move.",
+  title: "Chess Trainer: learn chess, play, and review your games",
+  description:
+    "Learn the rules step by step, play a bot that explains its moves, study openings, and review your games with Stockfish. Free, in your browser.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -32,7 +34,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <div className="page">{children}</div>
         <footer className="site-footer">
           <span>Analysis by Stockfish 19 (GPL), running in your browser.</span>
-          <Link href="/engine-spike">Engine test page</Link>
+          <nav className="footer-links" aria-label="Site">
+            <Link href="/about">About</Link>
+            <Link href="/privacy">Privacy</Link>
+            {FEEDBACK_URL && <a href={FEEDBACK_URL}>Send feedback</a>}
+          </nav>
         </footer>
       </body>
     </html>

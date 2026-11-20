@@ -50,5 +50,10 @@ export interface AnalyseOptions {
   multiPv?: number;
 }
 
-/** How long to think: a fixed depth (consistent, good for review) or a time limit in ms (good for live use). */
-export type SearchLimit = { depth: number } | { movetimeMs: number };
+/**
+ * How long to think: a fixed depth (consistent, good for review) or a time
+ * limit in ms (good for live use). A depth can also have `maxMs`: stop at
+ * that depth or after that long, whichever comes first, so slow phones are
+ * never kept waiting.
+ */
+export type SearchLimit = { depth: number; maxMs?: number } | { movetimeMs: number };

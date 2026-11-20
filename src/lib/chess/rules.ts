@@ -197,6 +197,16 @@ export function uciToSan(fen: string, uci: string): string | null {
   return played?.san ?? null;
 }
 
+/** Reads a move written in standard notation ("Nf3", "O-O", "b8=Q") in this position, or null if it isn't legal there. */
+export function sanToMove(fen: string, san: string): MoveInput | null {
+  try {
+    const m = new Chess(fen).move(san);
+    return { from: m.from, to: m.to, promotion: m.promotion as PromotionPiece | undefined };
+  } catch {
+    return null;
+  }
+}
+
 /** Converts the first `max` moves of an engine line to SAN, e.g. ["Qe7", "Nf3", "d6"]. */
 export function lineToSan(fen: string, uciMoves: string[], max = 6): string[] {
   const sans: string[] = [];

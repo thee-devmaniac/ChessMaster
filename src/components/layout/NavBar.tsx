@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+// In the order a beginner needs them: rules first, then playing, openings, and reviewing games.
 const LINKS = [
-  { href: "/analyse", label: "Analyse" },
+  { href: "/learn", label: "Learn" },
   { href: "/play", label: "Play" },
   { href: "/openings", label: "Openings" },
+  { href: "/analyse", label: "Analyse" },
 ];
 
 /** The top bar on every page: logo, section links (current one in gold) and the main call to action. */
@@ -15,7 +17,7 @@ export function NavBar() {
   return (
     <nav className="navbar" aria-label="Main">
       <Link href="/" className="logo">
-        <span aria-hidden="true">♔</span> Chess Trainer
+        <span aria-hidden="true">♔</span>échecs Trainer
       </Link>
       <ul className="nav-links">
         {LINKS.map((l) => (

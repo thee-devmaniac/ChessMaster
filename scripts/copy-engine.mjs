@@ -15,3 +15,7 @@ for (const file of ["stockfish-19-lite-single.js", "stockfish-19-lite-single.was
   copyFileSync(join(from, file), join(to, file));
   console.log(`copied ${file} -> public/engine/`);
 }
+
+// Stockfish is GPL-3.0: the licence text travels with the engine files we serve.
+copyFileSync(join(root, "node_modules", "stockfish", "Copying.txt"), join(to, "COPYING.txt"));
+console.log("copied Copying.txt -> public/engine/COPYING.txt");

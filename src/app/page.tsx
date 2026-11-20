@@ -10,6 +10,15 @@ import { Reveal } from "@/components/layout/Reveal";
 
 const FEATURES = [
   {
+    symbol: "♙",
+    mark: "Learn",
+    title: "New to chess? Start here",
+    text: "Fifteen short steps teach every rule on the board: how each piece moves, check and checkmate, castling and the special pawn moves.",
+    tags: ["Every piece", "Checkmate", "Castling"],
+    href: "/learn",
+    accent: "arc",
+  },
+  {
     symbol: "♔",
     mark: "Analyse",
     title: "See every position clearly",
@@ -59,31 +68,34 @@ const FEATURES = [
 const FACTS = [
   { value: "19", label: "Stockfish version" },
   { value: "0", label: "Servers needed" },
-  { value: "4", label: "Lesson modes" },
+  { value: "5", label: "Bot levels" },
 ];
 
 export default function Landing() {
   return (
     <main className="landing">
       <section className="hero">
-        <p className="eyebrow">Review&nbsp;&nbsp;•&nbsp;&nbsp;Predict&nbsp;&nbsp;•&nbsp;&nbsp;Practise</p>
+        <p className="eyebrow">Learn&nbsp;&nbsp;•&nbsp;&nbsp;Play&nbsp;&nbsp;•&nbsp;&nbsp;Review</p>
         <h1 className="hero-title">
           <span className="title-outline">Know</span>
           <span className="title-solid">your game</span>
         </h1>
         <p className="hero-subtitle">Every loss has a turning point. Find yours.</p>
         <p className="lede">
-          Replay the games you lost, let the engine show you where they turned, and build an opening repertoire
-          one move at a time.
+          Learn the rules step by step, play a bot that explains every move it makes, then replay your games and
+          see exactly where they turned.
         </p>
         <div className="hero-ctas">
           <Link href="/analyse" className="btn-gold">
             Review a game
           </Link>
-          <Link href="/openings" className="btn-arc">
-            Study an opening
+          <Link href="/play" className="btn-arc">
+            Play the bot
           </Link>
         </div>
+        <p className="hero-newcomer">
+          New to chess? <Link href="/learn">Learn the rules in 15 short steps</Link>.
+        </p>
         <dl className="facts">
           {FACTS.map((f) => (
             <div key={f.label}>

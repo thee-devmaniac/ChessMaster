@@ -1726,3 +1726,39 @@ button:disabled {
     transform: none;
   }
 }
+
+/* ---------- 18. Loading placeholders (shown for a moment while a lesson streams in) ---------- */
+.placeholder {
+  background: linear-gradient(90deg, rgba(212, 175, 55, 0.05), rgba(212, 175, 55, 0.12), rgba(212, 175, 55, 0.05));
+  background-size: 200% 100%;
+  animation: placeholder-shimmer 1.4s ease-in-out infinite;
+  border-radius: 2px;
+}
+
+.placeholder-title {
+  height: 2.6rem;
+  width: min(420px, 80%);
+  margin: 6px 0 12px;
+}
+
+.placeholder-line {
+  height: 1rem;
+  width: min(640px, 95%);
+}
+
+.placeholder-board {
+  aspect-ratio: 1;
+  width: min(640px, 100%);
+  margin-top: 24px;
+}
+
+@keyframes placeholder-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .placeholder {
+    animation: none;
+  }
+}

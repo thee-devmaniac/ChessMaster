@@ -4,6 +4,16 @@ import { useState, type CSSProperties } from "react";
 import type { Color } from "@/lib/engine/types";
 import { formatScore } from "@/lib/engine/score";
 import { SYMBOL, summarise, worstMoves, type Classification, type ReviewedMove } from "@/lib/review/classify";
+import type { MoveTiming } from "@/lib/review/time";
+import { formatClock, formatDuration } from "@/lib/chess/clock";
+
+/** "took 1.0s · 0:26 left", plus a flag for time trouble or rushing. */
+function timeNote(t?: MoveTiming): string {
+  if (!t || t.clockMs === undefined) return "";
+  const took = t.spentMs !== undefined ? `took ${formatDuration(t.spentMs)} · ` : "";
+  const flag = t.lowTime ? " · time trouble" : t.rushed ? " · rushed" : "";
+  return ` · ${took}${formatClock(t.clockMs)} left${flag}`;
+}
 
 export type ReviewState =
   | { status: "idle" }
@@ -33,12 +43,14 @@ interface Props {
   onJump: (id: string) => void;
   /** The reviewed move that is about to be played from the position on screen. */
   upcoming: ReviewedMove | null;
+  /** Clock data by node id, for games imported with clock times. */
+  timing?: Record<string, MoveTiming>;
 }
 
 const fullMove = (r: ReviewedMove) => `${r.moveNumber}${r.mover === "w" ? "." : "..."} ${r.san}`;
 
 export function ReviewPanel(props: Props) {
-  const { review, moves, target, canReview, depth, onDepthChange, onStart, onCancel, onJump, upcoming } = props;
+  const { review, moves, target, canReview, depth, onDepthChange, onStart, onCancel, onJump, upcoming, timing } = props;
   const [side, setSide] = useState<Color | "both">("both");
 
   const controls = (
@@ -138,6 +150,7 @@ export function ReviewPanel(props: Props) {
                   <span className="muted">
                     {formatScore(r.evalBefore)} → {formatScore(r.evalAfter)}
                     {r.bestMoveSan ? ` · better: ${r.bestMoveSan}` : ""}
+                    {r.id ? timeNote(timing?.[r.id]) : ""}
                   </span>
                 </button>
               </li>

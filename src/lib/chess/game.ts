@@ -1,5 +1,6 @@
 import { gameStatus, isThreefoldRepetition, makeMove, type GameStatus, type MoveInput, type PlayedMove } from "./rules";
 import { STARTING_FEN } from "./fen";
+import type { TimeControl } from "./clock";
 import {
   ROOT,
   addMove,
@@ -21,6 +22,8 @@ import {
 export interface GameRecord {
   startFen: string;
   moves: PlayedMove[];
+  /** The clock settings, for games imported with clock times. */
+  timeControl?: TimeControl;
 }
 
 /** The position (FEN) after `ply` moves of a line. */
@@ -39,7 +42,7 @@ export function statusAt(game: GameRecord, ply: number): GameStatus {
 
 /** Turns a list of node ids into a line. */
 export function recordOf(tree: GameTree, ids: string[]): GameRecord {
-  return { startFen: tree.startFen, moves: ids.map((id) => tree.nodes[id].move!) };
+  return { startFen: tree.startFen, moves: ids.map((id) => tree.nodes[id].move!), timeControl: tree.timeControl };
 }
 
 /**
@@ -105,7 +108,7 @@ export function sessionReducer(s: Session, action: SessionAction): Session {
     case "new":
       return newSession(action.startFen);
     case "load": {
-      const loaded = treeFromMoves(action.game.startFen, action.game.moves);
+      const loaded = treeFromMoves(action.game.startFen, action.game.moves, action.game.timeControl);
       return { tree: loaded, current: continuation(loaded, ROOT).at(-1) ?? ROOT };
     }
   }

@@ -1,4 +1,5 @@
 import { Chess, type Square as ChessJsSquare } from "chess.js";
+import { parseClockComment, parseTimeControl, type TimeControl } from "./clock";
 
 /**
  * The rules layer. Every function takes a FEN and returns plain data, so the
@@ -42,6 +43,8 @@ export interface PlayedMove {
   /** Engine notation: "g1f3", "e7e8q". */
   uci: string;
   fenAfter: string;
+  /** Time left on the mover's clock after this move, in ms, when the PGN recorded it. */
+  clockMs?: number;
 }
 
 export type GameStatus =
@@ -139,6 +142,8 @@ export interface ImportedGame {
   moves: PlayedMove[];
   /** PGN header tags, e.g. { White: "player1", Black: "player2", Result: "1-0" }. */
   headers: Record<string, string>;
+  /** The clock settings, from the TimeControl header, if the game had a normal clock. */
+  timeControl?: TimeControl;
 }
 
 export type PgnImport = { ok: true; game: ImportedGame } | { ok: false; error: string };
@@ -157,6 +162,9 @@ export function importPgn(text: string): PgnImport {
   }
   const history = chess.history({ verbose: true });
   const headers = chess.getHeaders();
+  // Clock comments are stored by the full position after each move (move counters
+  // included), so every comment belongs to exactly one move.
+  const commentAfter = new Map(chess.getComments().map((c) => [c.fen, c.comment]));
   if (history.length === 0 && !headers.FEN) {
     return { ok: false, error: "No moves found in the PGN" };
   }
@@ -171,8 +179,10 @@ export function importPgn(text: string): PgnImport {
         san: m.san,
         uci: m.lan,
         fenAfter: m.after,
+        clockMs: parseClockComment(commentAfter.get(m.after)),
       })),
       headers,
+      timeControl: parseTimeControl(headers.TimeControl),
     },
   };
 }

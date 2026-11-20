@@ -5,13 +5,16 @@ import { ChessBoard, type Orientation } from "@/components/board/ChessBoard";
 import { MoveList } from "@/components/board/MoveList";
 import { PromotionPicker } from "@/components/board/PromotionPicker";
 import { buildSquareStyles } from "@/components/board/highlights";
-import { STARTING_FEN, checkFen } from "@/lib/chess/fen";
-import { checkedKingSquare, importPgn, turn, type MoveInput, type PromotionPiece } from "@/lib/chess/rules";
+import { STARTING_FEN } from "@/lib/chess/fen";
+import { checkedKingSquare, turn, type MoveInput, type PromotionPiece } from "@/lib/chess/rules";
 import { describeStatus } from "@/lib/chess/describe";
 import { useKeyboardNav } from "@/hooks/useKeyboardNav";
 import { IDLE, choosePromotion, clickSquare, type ClickState } from "@/lib/chess/clickToMove";
 import { currentFen, currentStatus, newSession, recordOf, sessionReducer, type SessionAction } from "@/lib/chess/game";
-import { ROOT, has, isMainLine, lineThrough } from "@/lib/chess/tree";
+import { ROOT, continuation, has, isMainLine, lineThrough, moveNumberOf } from "@/lib/chess/tree";
+import { TimePanel } from "@/components/analysis/TimePanel";
+import { ImportPanel } from "@/components/analysis/ImportPanel";
+import { hasClockData, moveTimings, type MoveTiming } from "@/lib/review/time";
 import { EvalBar } from "@/components/analysis/EvalBar";
 import { EnginePanel } from "@/components/analysis/EnginePanel";
 import { ReviewPanel, type ReviewState } from "@/components/analysis/ReviewPanel";
@@ -43,8 +46,6 @@ export default function Home() {
   const [session, dispatch] = useReducer(sessionReducer, undefined, () => newSession());
   const [click, setClick] = useState<ClickState>(IDLE);
   const [orientation, setOrientation] = useState<Orientation>("white");
-  const [importText, setImportText] = useState("");
-  const [importMessage, setImportMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   const { tree, current } = session;
   const node = tree.nodes[current];
@@ -112,6 +113,23 @@ export default function Home() {
   const nextId = node.children[0];
   const upcoming = nextId ? (verdicts[nextId] ?? null) : null;
 
+  // ---- Clock: time analysis of the main line (only imported moves carry clock times) ----
+  const mainIds = continuation(tree, ROOT);
+  const mainLine = recordOf(tree, mainIds);
+  const showClock = hasClockData(mainLine);
+  const timings = showClock ? moveTimings(mainLine) : [];
+  const timingById: Record<string, MoveTiming> = {};
+  timings.forEach((t, i) => (timingById[mainIds[i]] = t));
+  const verdictsByPly = new Map<number, ReviewedMove>();
+  mainIds.forEach((id, i) => verdicts[id] && verdictsByPly.set(i + 1, verdicts[id]));
+  const moveName = (ply: number) => {
+    const id = mainIds[ply - 1];
+    const { number, color } = moveNumberOf(tree, id);
+    return `${number}${color === "w" ? "." : "..."} ${tree.nodes[id].move!.san}`;
+  };
+  // Where the board is along the main line (null when in a variation).
+  const currentPly = current === ROOT ? 0 : mainIds.includes(current) ? mainIds.indexOf(current) + 1 : null;
+
   // ---- Arrows and evaluation bar ----
   const arrows: BoardArrow[] = [];
   if (upcoming && upcoming.classification !== "good") {
@@ -161,35 +179,6 @@ export default function Home() {
     const result = choosePromotion(click, piece);
     setClick(result.state);
     playMove(result.move);
-  }
-
-  function loadFen() {
-    const result = checkFen(importText);
-    if (result.ok) {
-      act({ type: "new", startFen: result.fen });
-      setImportMessage({ ok: true, text: "Position loaded." });
-    } else {
-      setImportMessage({ ok: false, text: `Invalid FEN: ${result.error}` });
-    }
-  }
-
-  function loadPgn() {
-    const result = importPgn(importText);
-    if (result.ok) {
-      act({ type: "load", game: result.game });
-      // chess.js fills missing headers with "?" (names) and "*" (result): treat those as unknown.
-      const known = (v?: string) => (v && v !== "?" && v !== "*" ? v : undefined);
-      const White = known(result.game.headers.White);
-      const Black = known(result.game.headers.Black);
-      const Result = known(result.game.headers.Result);
-      const who = White && Black ? `${White} vs ${Black}` : "Game";
-      setImportMessage({
-        ok: true,
-        text: `${who}: ${result.game.moves.length} half-moves loaded${Result ? ` (${Result})` : ""}.`,
-      });
-    } else {
-      setImportMessage({ ok: false, text: `Could not read PGN: ${result.error}` });
-    }
   }
 
   const squareStyles = buildSquareStyles({
@@ -279,23 +268,24 @@ export default function Home() {
           onCancel={() => reviewAbort.current?.abort()}
           onJump={(id) => act({ type: "goTo", id: tree.nodes[id].parent ?? ROOT })}
           upcoming={upcoming}
+          timing={timingById}
         />
 
-        <details className="import">
-          <summary>Import a game (PGN) or position (FEN)</summary>
-          <textarea
-            rows={6}
-            value={importText}
-            onChange={(e) => setImportText(e.target.value)}
-            placeholder={"Paste a PGN from Chess.com or Lichess, e.g.\n1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7#\n\nor a FEN string."}
-            spellCheck={false}
+        {showClock && (
+          <TimePanel
+            timings={timings}
+            timeControl={mainLine.timeControl}
+            verdicts={verdictsByPly}
+            moveName={moveName}
+            currentPly={currentPly}
+            onSelect={(ply) => act({ type: "goTo", id: mainIds[ply - 1] })}
           />
-          <div className="buttons">
-            <button onClick={loadPgn}>Load PGN</button>
-            <button onClick={loadFen}>Load FEN</button>
-          </div>
-          {importMessage && <p className={importMessage.ok ? "muted" : "error"}>{importMessage.text}</p>}
-        </details>
+        )}
+
+        <ImportPanel
+          onLoadGame={(game) => act({ type: "load", game })}
+          onLoadFen={(startFen) => act({ type: "new", startFen })}
+        />
 
         <p className="muted fen">Current: {fen}</p>
       </aside>

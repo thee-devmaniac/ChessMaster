@@ -1,4 +1,5 @@
 import type { PlayedMove } from "./rules";
+import type { TimeControl } from "./clock";
 
 /**
  * A game as a TREE of moves, so trying a different move keeps the original.
@@ -37,6 +38,8 @@ export interface GameTree {
   nodes: Record<string, MoveNode>;
   /** Counter for new node ids, so ids are predictable (n1, n2, ...). */
   nextId: number;
+  /** The clock settings of an imported game, if it had a clock. */
+  timeControl?: TimeControl;
 }
 
 export function newTree(startFen: string): GameTree {
@@ -133,8 +136,8 @@ export function promoteToMainLine(tree: GameTree, id: string): GameTree {
 }
 
 /** Builds a tree with a single line (used when importing a PGN). */
-export function treeFromMoves(startFen: string, moves: PlayedMove[]): GameTree {
-  let tree = newTree(startFen);
+export function treeFromMoves(startFen: string, moves: PlayedMove[], timeControl?: TimeControl): GameTree {
+  let tree: GameTree = { ...newTree(startFen), timeControl };
   let at = ROOT;
   for (const m of moves) {
     const added = addMove(tree, at, m);
